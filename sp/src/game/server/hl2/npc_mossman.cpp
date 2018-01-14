@@ -90,11 +90,19 @@ int CNPC_Mossman::GetSoundInterests ( void )
 //-----------------------------------------------------------------------------
 void CNPC_Mossman::Spawn()
 {
+	// Allow custom model usage
+	char *szModel = (char *)STRING(GetModelName());
+	if (!szModel || !*szModel)
+	{
+		szModel = "models/mossman.mdl";
+		SetModelName(AllocPooledString(szModel));
+	}
+
 	Precache();
 
 	BaseClass::Spawn();
 
-	SetModel( "models/mossman.mdl" );
+	SetModel(szModel);
 
 	SetHullType(HULL_HUMAN);
 	SetHullSizeNormal();
@@ -119,7 +127,7 @@ void CNPC_Mossman::Spawn()
 //-----------------------------------------------------------------------------
 void CNPC_Mossman::Precache()
 {
-	PrecacheModel( "models/mossman.mdl" );
+	PrecacheModel(STRING(GetModelName()));
 	
 	BaseClass::Precache();
 }	

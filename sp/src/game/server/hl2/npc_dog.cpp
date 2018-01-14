@@ -451,11 +451,19 @@ void CNPC_Dog::Spawn( void )
 {
 	m_bBoneFollowersActive = true;
 
+	// Allow custom model usage
+	char *szModel = (char *)STRING(GetModelName());
+	if (!szModel || !*szModel)
+	{
+		szModel = "models/dog.mdl";
+		SetModelName(AllocPooledString(szModel));
+	}
+
 	Precache();
 
 	BaseClass::Spawn();
 
-	SetModel( "models/dog.mdl" );
+	SetModel(szModel);
 
 	SetHullType( HULL_WIDE_HUMAN );
 	SetHullSizeNormal();
@@ -638,7 +646,7 @@ void CNPC_Dog::PullObject( bool bMantain )
 //-----------------------------------------------------------------------------
 void CNPC_Dog::Precache( void )
 {
-	PrecacheModel( "models/dog.mdl" );
+	PrecacheModel(STRING(GetModelName()));
 	
 	PrecacheScriptSound( "Weapon_PhysCannon.Launch" );
 
