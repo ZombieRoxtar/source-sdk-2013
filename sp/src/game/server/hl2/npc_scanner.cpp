@@ -208,6 +208,7 @@ CNPC_CScanner::CNPC_CScanner()
 	Q_strncpy(szMapName, STRING(gpGlobals->mapname), sizeof(szMapName) );
 	Q_strlower(szMapName);
 
+	/* All hacks need a comment calling them such so that we can fix them! */
 	if (!Q_strnicmp(szMapName, "d3_c17", 6))
 	{
 		if(!m_bIsClawScanner)
