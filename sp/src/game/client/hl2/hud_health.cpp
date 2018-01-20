@@ -34,6 +34,7 @@ using namespace vgui;
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+ConVar hud_health("hud_health", "1", FCVAR_ARCHIVE, "Show health on the HUD.");
 #define INIT_HEALTH -1
 
 //-----------------------------------------------------------------------------
@@ -45,6 +46,7 @@ class CHudHealth : public CHudElement, public CHudNumericDisplay
 
 public:
 	CHudHealth( const char *pElementName );
+	bool ShouldDraw( void );
 	virtual void Init( void );
 	virtual void VidInit( void );
 	virtual void Reset( void );
@@ -167,4 +169,9 @@ void CHudHealth::MsgFunc_Damage( bf_read &msg )
 			g_pClientMode->GetViewportAnimationController()->StartAnimationSequence("HealthDamageTaken");
 		}
 	}
+}
+
+bool CHudHealth::ShouldDraw(void)
+{
+	return (hud_health.GetBool() && CHudElement::ShouldDraw());
 }

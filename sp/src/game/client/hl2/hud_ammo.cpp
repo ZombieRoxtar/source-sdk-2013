@@ -21,6 +21,7 @@
 
 using namespace vgui;
 
+ConVar hud_ammo("hud_ammo", "1", FCVAR_ARCHIVE, "Show ammo on the HUD.");
 //-----------------------------------------------------------------------------
 // Purpose: Displays current ammunition level
 //-----------------------------------------------------------------------------
@@ -468,7 +469,7 @@ protected:
 		C_BaseCombatWeapon *wpn = GetActiveWeapon();
 		C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
 		IClientVehicle *pVehicle = player ? player->GetVehicle() : NULL;
-		if (!wpn || !player || pVehicle)
+		if (!wpn || !player || pVehicle || !hud_ammo.GetBool())
 		{
 			m_hCurrentActiveWeapon = NULL;
 			SetPaintEnabled(false);

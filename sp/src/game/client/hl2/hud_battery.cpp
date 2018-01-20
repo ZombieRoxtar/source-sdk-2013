@@ -24,6 +24,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+extern ConVar hud_health;
+ConVar hud_armor("hud_armor", "1", FCVAR_ARCHIVE, "Show armor on the HUD.");
 #define INIT_BAT	-1
 
 //-----------------------------------------------------------------------------
@@ -94,7 +96,7 @@ void CHudBattery::VidInit( void )
 //-----------------------------------------------------------------------------
 bool CHudBattery::ShouldDraw( void )
 {
-	bool bNeedsDraw = ( m_iBat != m_iNewBat ) || ( GetAlpha() > 0 );
+	bool bNeedsDraw = ( m_iBat != m_iNewBat ) || ( GetAlpha() > 0 ) && ( hud_health.GetBool() && hud_armor.GetBool() );
 
 	return ( bNeedsDraw && CHudElement::ShouldDraw() );
 }

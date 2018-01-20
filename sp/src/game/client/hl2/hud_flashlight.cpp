@@ -19,6 +19,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+ConVar hud_flashlight("hud_flashlight", "1", FCVAR_ARCHIVE, "Show flashlight status on the HUD.");
 //-----------------------------------------------------------------------------
 // Purpose: Shows the flashlight icon
 //-----------------------------------------------------------------------------
@@ -109,6 +110,11 @@ void CHudFlashlight::Paint()
 	if ( !pPlayer )
 		return;
 
+	if ( !hud_flashlight.GetBool() )
+	{
+		SetPaintBackgroundEnabled(false);
+		return;
+	}
 	// Only paint if we're using the new flashlight code
 	if ( pPlayer->m_HL2Local.m_flFlashBattery < 0.0f )
 	{
