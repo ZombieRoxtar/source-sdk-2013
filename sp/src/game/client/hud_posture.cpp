@@ -17,6 +17,7 @@
 #include <vgui_controls/Panel.h>
 #include <vgui/IVGui.h>
 
+ConVar cl_hud_posture("cl_hud_posture", "1", FCVAR_ARCHIVE, "Show a posture indicator on the HUD.");
 
 using namespace vgui;
 
@@ -38,7 +39,6 @@ public:
 	CHudPosture( const char *pElementName );
 	bool			ShouldDraw( void );
 
-#ifdef _X360 	// if not xbox 360, don't waste code space on this
 	virtual void	Init( void );
 	virtual void	Reset( void );
 	virtual void	OnTick( void );
@@ -58,7 +58,6 @@ private:
 		   FADING_UP, 
 		   FADING_DOWN
 	} m_kIsFading;
-#endif
 };	
 
 
@@ -98,15 +97,11 @@ CHudPosture::CHudPosture( const char *pElementName ) : CHudElement( pElementName
 //-----------------------------------------------------------------------------
 bool CHudPosture::ShouldDraw()
 {
-#ifdef _X360
 	return ( m_duckTimeout >= gpGlobals->curtime &&
+		cl_hud_posture.GetBool() &&
 		CHudElement::ShouldDraw() );
-#else
-	return false;
-#endif
 }
 
-#ifdef _X360
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -191,5 +186,4 @@ void CHudPosture::Paint()
 	surface()->DrawUnicodeChar( duck_char );
 }
 
-#endif
 
