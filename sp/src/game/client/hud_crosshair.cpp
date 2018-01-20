@@ -123,6 +123,7 @@ bool CHudCrosshair::ShouldDraw( void )
 			crosshair.GetInt() &&
 			!engine->IsDrawingLoadingImage() &&
 			!engine->IsPaused() && 
+			( pPlayer->IsSuitEquipped() || g_pGameRules->IsMultiplayer() || ( pWeapon && pWeapon->ShouldDrawCrosshair() )) &&
 			g_pClientMode->ShouldDrawCrosshair() &&
 			!( pPlayer->GetFlags() & FL_FROZEN ) &&
 			( pPlayer->entindex() == render->GetViewEntity() ) &&
