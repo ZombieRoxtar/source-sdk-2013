@@ -18,12 +18,14 @@
 #include "func_break.h"
 #include "physics_impact_damage.h"
 #include "entityblocker.h"
+#include "hl2_player.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 #define SF_PROP_VEHICLE_ALWAYSTHINK		0x00000001
 
+ConVar vehicle_always_track( "vehicle_always_track", "0", FCVAR_ARCHIVE | FCVAR_CHEAT, "Automatically track entered vehicles with the HEV suit." );
 ConVar g_debug_vehiclebase( "g_debug_vehiclebase", "0", FCVAR_CHEAT );
 extern ConVar g_debug_vehicledriver;
 
@@ -607,6 +609,15 @@ void CPropVehicleDriveable::EnterVehicle( CBaseCombatCharacter *pPassenger )
 		m_pServerVehicle->InitViewSmoothing( pPlayer->GetAbsOrigin() + vecViewOffset, pPlayer->EyeAngles() );
 
 		m_VehiclePhysics.GetVehicle()->OnVehicleEnter();
+
+		// Update HEV Tracker
+		if ( vehicle_always_track.GetBool() )
+		{
+			CHL2_Player *pHL2Player = dynamic_cast<CHL2_Player*>(pPlayer);
+			if (pHL2Player)
+				pHL2Player->SetLocatorTargetEntity(this);
+		}
+
 	}
 	else
 	{
