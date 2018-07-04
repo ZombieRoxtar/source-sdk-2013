@@ -5970,31 +5970,41 @@ void CBasePlayer::ImpulseCommands( )
 	m_nImpulse = 0;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Create Vechicles
+//-----------------------------------------------------------------------------
+static CBaseEntity* CreateVehicle( CBasePlayer *pPlayer, const char *name, const char *classname, const char *model, const char *script )
+{
+	// Cheat to create a vehicle in front of the player
+	Vector vecForward;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward);
+	CBaseEntity *pJeep = (CBaseEntity *)CreateEntityByName(classname);
+	if (pJeep)
+	{
+		Vector vecOrigin = pPlayer->GetAbsOrigin() + vecForward * 256 + Vector(0, 0, 64);
+		QAngle vecAngles(0, pPlayer->GetAbsAngles().y - 90, 0);
+		pJeep->SetAbsOrigin(vecOrigin);
+		pJeep->SetAbsAngles(vecAngles);
+		pJeep->KeyValue("model", model);
+		pJeep->KeyValue("solid", "6");
+		pJeep->KeyValue("targetname", name);
+		pJeep->KeyValue("vehiclescript", script);
+		DispatchSpawn(pJeep);
+		pJeep->Activate();
+		pJeep->Teleport(&vecOrigin, &vecAngles, NULL);
+		return pJeep;
+	}
+	return nullptr;
+}
+
 #ifdef HL2_EPISODIC
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose: Cheat to create a jalopy in front of the player
 //-----------------------------------------------------------------------------
 static void CreateJalopy( CBasePlayer *pPlayer )
 {
-	// Cheat to create a jeep in front of the player
-	Vector vecForward;
-	AngleVectors( pPlayer->EyeAngles(), &vecForward );
-	CBaseEntity *pJeep = (CBaseEntity *)CreateEntityByName( "prop_vehicle_jeep" );
-	if ( pJeep )
-	{
-		Vector vecOrigin = pPlayer->GetAbsOrigin() + vecForward * 256 + Vector(0,0,64);
-		QAngle vecAngles( 0, pPlayer->GetAbsAngles().y - 90, 0 );
-		pJeep->SetAbsOrigin( vecOrigin );
-		pJeep->SetAbsAngles( vecAngles );
-		pJeep->KeyValue( "model", "models/vehicle.mdl" );
-		pJeep->KeyValue( "solid", "6" );
-		pJeep->KeyValue( "targetname", "jeep" );
-		pJeep->KeyValue( "vehiclescript", "scripts/vehicles/jalopy.txt" );
-		DispatchSpawn( pJeep );
-		pJeep->Activate();
-		pJeep->Teleport( &vecOrigin, &vecAngles, NULL );
-	}
+	CreateVehicle(pPlayer, "jeep", "prop_vehicle_jeep", "models/vehicle.mdl", "scripts/vehicles/jalopy.txt");
 }
 
 void CC_CH_CreateJalopy( void )
@@ -6010,28 +6020,11 @@ static ConCommand ch_createjalopy("ch_createjalopy", CC_CH_CreateJalopy, "Spawn 
 #endif // HL2_EPISODIC
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose: Cheat to create a jeep in front of the player
 //-----------------------------------------------------------------------------
 static void CreateJeep( CBasePlayer *pPlayer )
 {
-	// Cheat to create a jeep in front of the player
-	Vector vecForward;
-	AngleVectors( pPlayer->EyeAngles(), &vecForward );
-	CBaseEntity *pJeep = (CBaseEntity *)CreateEntityByName( "prop_vehicle_jeep" );
-	if ( pJeep )
-	{
-		Vector vecOrigin = pPlayer->GetAbsOrigin() + vecForward * 256 + Vector(0,0,64);
-		QAngle vecAngles( 0, pPlayer->GetAbsAngles().y - 90, 0 );
-		pJeep->SetAbsOrigin( vecOrigin );
-		pJeep->SetAbsAngles( vecAngles );
-		pJeep->KeyValue( "model", "models/buggy.mdl" );
-		pJeep->KeyValue( "solid", "6" );
-		pJeep->KeyValue( "targetname", "jeep" );
-		pJeep->KeyValue( "vehiclescript", "scripts/vehicles/jeep_test.txt" );
-		DispatchSpawn( pJeep );
-		pJeep->Activate();
-		pJeep->Teleport( &vecOrigin, &vecAngles, NULL );
-	}
+	CreateVehicle(pPlayer, "jeep", "prop_vehicle_jeep", "models/buggy.mdl", "scripts/vehicles/jeep_test.txt");
 }
 
 
@@ -6047,27 +6040,11 @@ static ConCommand ch_createjeep("ch_createjeep", CC_CH_CreateJeep, "Spawn jeep i
 
 
 //-----------------------------------------------------------------------------
-// Create an airboat in front of the specified player
+// Purpose: Cheat to create a jeep in front of the player
 //-----------------------------------------------------------------------------
 static void CreateAirboat( CBasePlayer *pPlayer )
 {
-	// Cheat to create a jeep in front of the player
-	Vector vecForward;
-	AngleVectors( pPlayer->EyeAngles(), &vecForward );
-	CBaseEntity *pJeep = ( CBaseEntity* )CreateEntityByName( "prop_vehicle_airboat" );
-	if ( pJeep )
-	{
-		Vector vecOrigin = pPlayer->GetAbsOrigin() + vecForward * 256 + Vector( 0,0,64 );
-		QAngle vecAngles( 0, pPlayer->GetAbsAngles().y - 90, 0 );
-		pJeep->SetAbsOrigin( vecOrigin );
-		pJeep->SetAbsAngles( vecAngles );
-		pJeep->KeyValue( "model", "models/airboat.mdl" );
-		pJeep->KeyValue( "solid", "6" );
-		pJeep->KeyValue( "targetname", "airboat" );
-		pJeep->KeyValue( "vehiclescript", "scripts/vehicles/airboat.txt" );
-		DispatchSpawn( pJeep );
-		pJeep->Activate();
-	}
+	CreateVehicle(pPlayer, "airboat", "prop_vehicle_airboat", "models/airboat.mdl", "scripts/vehicles/airboat.txt");
 }
 
 
