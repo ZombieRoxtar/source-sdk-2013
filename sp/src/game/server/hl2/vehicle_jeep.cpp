@@ -135,6 +135,7 @@ BEGIN_DATADESC( CPropJeep )
 	DEFINE_INPUTFUNC( FIELD_VOID, "ShowHudHint", InputShowHudHint ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "StartRemoveTauCannon", InputStartRemoveTauCannon ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "FinishRemoveTauCannon", InputFinishRemoveTauCannon ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "AddTauCannon", InputAddTauCannon ),
 
 	DEFINE_THINKFUNC( JeepSeagullThink ),
 END_DATADESC()
@@ -1672,6 +1673,16 @@ void CPropJeep::InputFinishRemoveTauCannon( inputdata_t &inputdata )
 	// Remove & hide the gun
 	SetBodygroup( 1, false );
 	m_bHasGun = false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Restore Tau for HL2 Compatibility
+//-----------------------------------------------------------------------------
+void CPropJeep::InputAddTauCannon( inputdata_t &inputdata )
+{
+	/* Add & Show the gun */
+	SetBodygroup( 1, true );
+	m_bHasGun = true;
 }
 
 //========================================================================================================================================

@@ -118,6 +118,7 @@ private:
 	void		InputShowHudHint( inputdata_t &inputdata );
 	void		InputStartRemoveTauCannon( inputdata_t &inputdata );
 	void		InputFinishRemoveTauCannon( inputdata_t &inputdata );
+	void		InputAddTauCannon( inputdata_t &inputdata );
 
 protected:
 
