@@ -131,6 +131,19 @@ private:
 		pkvFile->deleteThis();
 		engine->LockNetworkStringTables(oldLock);
 	}
+	//-----------------------------------------------------------------------------
+	virtual void LevelShutdownPreEntity()
+	{
+		/* Destroy our entities or the game will crash if the map is reopened. */
+		for (int i = m_hSpawnedEntities.Count() - 1; i >= 0; i--)
+		{
+			if (m_hSpawnedEntities[i])
+			{
+				UTIL_Remove(m_hSpawnedEntities[i]);
+			}
+		}
+		m_hSpawnedEntities.Purge();
+	}
 };
 //-----------------------------------------------------------------------------
 CPatchSystem g_PatchSystem;
