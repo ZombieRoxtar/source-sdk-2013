@@ -647,7 +647,6 @@ public:
 				{
 					Warning("Commentary: Failed to spawn commentary entity, type: '%s'\n", pNodeName );
 				}
-				pkvFile->deleteThis();
 				// Move to next entity
 				pkvNode = pkvNode->GetNextKey();
 			}
@@ -662,7 +661,7 @@ public:
 		{
 			Msg( "Commentary: Could not find commentary data file '%s'. \n", szFullName );
 		}
-
+		pkvFile->deleteThis();
 		engine->LockNetworkStringTables( oldLock );
 	}
 

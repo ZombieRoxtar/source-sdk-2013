@@ -119,7 +119,6 @@ private:
 				{
 					Warning("Patching: Failed to spawn entity, type: '%s'\n", pNodeName);
 				}
-				pkvFile->deleteThis();
 				// Move to next entity
 				pkvNode = pkvNode->GetNextKey();
 			}
@@ -129,6 +128,7 @@ private:
 				m_hSpawnedEntities[i]->Activate();
 			}
 		}
+		pkvFile->deleteThis();
 		engine->LockNetworkStringTables(oldLock);
 	}
 };
