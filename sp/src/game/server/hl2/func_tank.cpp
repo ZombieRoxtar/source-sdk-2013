@@ -736,6 +736,30 @@ void CFuncTank::Spawn( void )
 	Precache();
 
 #ifdef HL2_EPISODIC
+	/*
+		This will allow us to support the older
+		enum ammo types when the sz type is not present.
+	*/
+	if (!m_iszAmmoType)
+	{
+		switch (m_bulletType)
+		{
+		/* 0 is none; null is fine for this. */
+		case 1:
+			m_iszAmmoType = castable_string_t("Pistol");
+			break;
+		case 2:
+			m_iszAmmoType = castable_string_t("SMG1");
+			break;
+		case 3:
+			m_iszAmmoType = castable_string_t("AR2");
+			break;
+		/*
+			4 is "laser". For now we'll stick to the
+			legacy behavior of this not working.
+		*/
+		}
+	}
 	m_iAmmoType = GetAmmoDef()->Index( STRING( m_iszAmmoType ) );
 #else
 	m_iSmallAmmoType	= GetAmmoDef()->Index("Pistol");
