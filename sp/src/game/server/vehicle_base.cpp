@@ -463,6 +463,10 @@ void CPropVehicleDriveable::Spawn( void )
 	m_flMinimumSpeedToEnterExit = 0;
 	m_takedamage = DAMAGE_EVENTS_ONLY;
 	m_bEngineLocked = false;
+
+	// For Enhanced HEV Tracking. The glow system uses floats.
+	SetGlowEffectColor(COLOR_YELLOW.r() / 255.0f, COLOR_YELLOW.g() / 255.0f, COLOR_YELLOW.b() / 255.0f);
+	SetGlowEffectAlpha(0.75f);
 }
 
 
@@ -611,11 +615,12 @@ void CPropVehicleDriveable::EnterVehicle( CBaseCombatCharacter *pPassenger )
 		m_VehiclePhysics.GetVehicle()->OnVehicleEnter();
 
 		// Update HEV Tracker
-		if ( vehicle_always_track.GetBool() )
+		if ( vehicle_always_track.GetBool() || GetTrackingFlag() )
 		{
 			CHL2_Player *pHL2Player = dynamic_cast<CHL2_Player*>(pPlayer);
 			if (pHL2Player)
 				pHL2Player->SetLocatorTargetEntity(this);
+			RemoveGlowEffect(); // I don't want this when I'm IN the vehicle.
 		}
 
 	}
@@ -653,6 +658,12 @@ void CPropVehicleDriveable::ExitVehicle( int nRole )
 
 	// Clear our state
 	m_pServerVehicle->InitViewSmoothing( vec3_origin, vec3_angle );
+
+	// Enhanced HEV Tracking
+	if ( vehicle_always_track.GetBool() || GetTrackingFlag() )
+	{
+		AddGlowEffect();
+	}
 }
 
 //-----------------------------------------------------------------------------

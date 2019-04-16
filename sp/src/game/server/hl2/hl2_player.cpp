@@ -2554,6 +2554,39 @@ void CHL2_Player::GetAutoaimVector( autoaim_params_t &params )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
+void CHL2_Player::SetLocatorTargetEntity(CBaseEntity *pEntity)
+{
+	/*
+		Out with the old...
+		This method will support switching targets and only the new one will glow.
+		Telling the car will make it intelligent enough to only
+		glow when UNoccupied.
+	// */
+	if (m_hLocatorTargetEntity)
+	{
+		m_hLocatorTargetEntity.Get()->RemoveGlowEffect();
+		CPropVehicleDriveable *pOldVech = dynamic_cast<CPropVehicleDriveable*>(m_hLocatorTargetEntity.Get());
+		if (pOldVech)
+			pOldVech->SetTrackingFlag(false);
+	}
+
+	// In with the new
+	m_hLocatorTargetEntity.Set(pEntity);
+	CPropVehicleDriveable *pNewVech = dynamic_cast<CPropVehicleDriveable*>(pEntity);
+	if (pNewVech)
+	{
+		pNewVech->SetTrackingFlag(true);
+		// Don't add the glow if I'm already inside.
+		CBaseEntity *pDriver = pNewVech->GetDriver();
+		if (pDriver && pDriver == this)
+			return;
+	}
+	pEntity->AddGlowEffect();
+
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 bool CHL2_Player::ShouldKeepLockedAutoaimTarget( EHANDLE hLockedTarget )
 {
 	Vector vecLooking;

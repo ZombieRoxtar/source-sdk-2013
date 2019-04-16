@@ -182,6 +182,8 @@ public:
 	virtual void	Think( void );
 	virtual void	TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator );
 	virtual void	Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info );
+	virtual bool	GetTrackingFlag(void) { return m_bBeingTracked; } // Do I think I'm on the HUD tracker?
+	virtual void	SetTrackingFlag( bool set = true ) { m_bBeingTracked = set; } // Should I think I'm on the HUD tracker?
 
 	// Vehicle handling
 	virtual void	VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
@@ -291,6 +293,7 @@ public:
 	const Vector &GetEyeExitEndpoint( void ) { return m_vecEyeExitEndpoint; }
 
 protected:
+	bool m_bBeingTracked; // Is this vehicle on the player's HUD
 	// Entering / Exiting
 	bool		m_bEngineLocked;	// Mapmaker override on whether the vehicle's allowed to be turned on/off
 	bool		m_bLocked;

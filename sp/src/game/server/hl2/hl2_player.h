@@ -208,7 +208,7 @@ public:
 	virtual void		GetAutoaimVector( autoaim_params_t &params );
 	bool				ShouldKeepLockedAutoaimTarget( EHANDLE hLockedTarget );
 
-	void				SetLocatorTargetEntity( CBaseEntity *pEntity ) { m_hLocatorTargetEntity.Set( pEntity ); }
+	void				SetLocatorTargetEntity(CBaseEntity *pEntity);
 
 	virtual int			GiveAmmo( int nCount, int nAmmoIndex, bool bSuppressSound);
 	virtual bool		BumpWeapon( CBaseCombatWeapon *pWeapon );
