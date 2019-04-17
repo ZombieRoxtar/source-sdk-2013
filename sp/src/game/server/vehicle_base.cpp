@@ -386,6 +386,10 @@ CPropVehicleDriveable::CPropVehicleDriveable( void ) :
 {
 	m_vecEyeExitEndpoint.Init();
 	m_vecGunCrosshair.Init();
+
+	// For Enhanced HEV Tracking. The glow system uses floats.
+	SetGlowEffectColor(COLOR_YELLOW.r() / 255.0f, COLOR_YELLOW.g() / 255.0f, COLOR_YELLOW.b() / 255.0f);
+	SetGlowEffectAlpha(0.75f);
 }
 
 //-----------------------------------------------------------------------------
@@ -463,10 +467,6 @@ void CPropVehicleDriveable::Spawn( void )
 	m_flMinimumSpeedToEnterExit = 0;
 	m_takedamage = DAMAGE_EVENTS_ONLY;
 	m_bEngineLocked = false;
-
-	// For Enhanced HEV Tracking. The glow system uses floats.
-	SetGlowEffectColor(COLOR_YELLOW.r() / 255.0f, COLOR_YELLOW.g() / 255.0f, COLOR_YELLOW.b() / 255.0f);
-	SetGlowEffectAlpha(0.75f);
 }
 
 
