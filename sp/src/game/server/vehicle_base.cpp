@@ -511,6 +511,7 @@ void CPropVehicleDriveable::OnRestore( void )
 		// Restore the passenger information we're holding on to
 		pServerVehicle->RestorePassengerInfo();
 	}
+	//BUGBUG: A glowing car is not glowing when restoring a save.
 }
 
 

@@ -84,15 +84,13 @@ void CFuncMoveLinear::Spawn( void )
 		m_flMoveDistance = DotProductAbs( m_vecMoveDir, vecOBB ) - m_flLip;
 	}
 
-	/* BM: Fixing this based on: https://developer.valvesoftware.com/wiki/CFuncMoveLinear_Fix
-	m_vecPosition1 = GetAbsOrigin() - (m_vecMoveDir * m_flMoveDistance * m_flStartPosition);
-	m_vecPosition2 = m_vecPosition1 + (m_vecMoveDir * m_flMoveDistance);
-	m_vecFinalDest = GetAbsOrigin();
+	/*
+		The start & end positions are now calculated in local (parent) space.
+		TODO: What about the SetParent input?
 	//*/
 	m_vecPosition1 = GetLocalOrigin() - (m_vecMoveDir * m_flMoveDistance * m_flStartPosition);
 	m_vecPosition2 = m_vecPosition1 + (m_vecMoveDir * m_flMoveDistance);
 	m_vecFinalDest = GetLocalOrigin();
-	//*/ The start & end positions are now calculated in local (parent) space.
 
 	SetTouch( NULL );
 
