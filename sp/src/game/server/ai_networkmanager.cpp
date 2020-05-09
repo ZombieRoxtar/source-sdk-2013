@@ -152,7 +152,8 @@ void CAI_NetworkManager::RebuildNetworkGraph( void )
 {
 	if (m_pfnThink != (void (CBaseEntity::*)())&CAI_NetworkManager::RebuildThink)
 	{
-		UTIL_CenterPrintAll( "Doing partial rebuild of Node Graph...\n" );
+		if (developer.GetBool())
+			UTIL_CenterPrintAll( "Doing partial rebuild of Node Graph...\n" );
 		SetThink(&CAI_NetworkManager::RebuildThink);
 		SetNextThink( gpGlobals->curtime + 0.1f );
 	}
@@ -1110,7 +1111,8 @@ void CAI_NetworkManager::DelayedInit( void )
 #endif
 
 			DevMsg( "Node Graph out of Date. Rebuilding... (%d, %d, %d)\n", (int)m_bDontSaveGraph, (int)!CAI_NetworkManager::NetworksLoaded(), (int) engine->IsInEditMode() );
-			UTIL_CenterPrintAll( "Node Graph out of Date. Rebuilding...\n" );
+			if (developer.GetBool())
+				UTIL_CenterPrintAll( "Node Graph out of Date. Rebuilding...\n" );
 			m_bNeedGraphRebuild = true;
 			g_pAINetworkManager->SetNextThink( gpGlobals->curtime + 1 );
 			return;
