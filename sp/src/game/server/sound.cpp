@@ -875,10 +875,6 @@ void CAmbientGeneric::InputStopSound( inputdata_t &inputdata )
 	}
 }
 
-/* BM: Function edited according to https://developer.valvesoftware.com/wiki/Ambient_generic:_stop_and_toggle_fix
-	This moves the job of setting m_fActive to the very top of the chain, denying any ambient_generic
-	function wriggle room to escape it! This opens up the use of the volume and pitch inputs, and
-	allows you to safely start a sound with a map.*/
 void CAmbientGeneric::SendSound( SoundFlags_t flags)
 {
 	char *szSoundFile = (char *)STRING( m_iszSound );

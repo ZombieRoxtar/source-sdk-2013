@@ -398,7 +398,7 @@ int CFuncMoveLinear::DrawDebugTextOverlays(void)
 	}
 	return text_offset;
 }
-/* BM: Overriding this to run a fix when it is called */
+
 //-----------------------------------------------------------------------------
 // Purpose: Runs a fix atfer the base version clearly dosen't cut it.
 //-----------------------------------------------------------------------------

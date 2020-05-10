@@ -40,7 +40,6 @@ bool NPC_CheckBrushExclude( CBaseEntity *pEntity, CBaseEntity *pBrush );
 
 ConVar r_visualizetraces( "r_visualizetraces", "0", FCVAR_CHEAT );
 ConVar developer("developer", "0", 0, "Set developer message level" ); // developer mode
-/* BM: removed a period to make the help string match the parent */
 
 float UTIL_VecToYaw( const Vector &vec )
 {

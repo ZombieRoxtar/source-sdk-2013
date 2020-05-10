@@ -1559,13 +1559,6 @@ CPhysMagnet::~CPhysMagnet( void )
 //-----------------------------------------------------------------------------
 void CPhysMagnet::Spawn( void )
 {
-	/* BM: Preventing a crash
-	Precache();
-
-	SetMoveType( MOVETYPE_NONE );
-	SetSolid( SOLID_VPHYSICS );
-	SetModel( STRING( GetModelName() ) );
-	//*/
 	SetMoveType( MOVETYPE_NONE );
 	SetSolid( SOLID_VPHYSICS );
 

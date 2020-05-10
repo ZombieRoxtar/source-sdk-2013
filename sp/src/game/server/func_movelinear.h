@@ -36,7 +36,7 @@ public:
 
 	int			DrawDebugTextOverlays(void);
 
-	//* BM: Overriding this to run a fix when it is called */
+	//* Override runs a fix when it is called */
 	virtual void SetParent( CBaseEntity* pNewParent, int iAttachment = -1 );
 
 	// Input handlers

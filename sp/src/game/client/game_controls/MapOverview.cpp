@@ -851,7 +851,7 @@ void CMapOverview::SetMap(const char * levelname)
 	
 	if ( !m_MapKeyValues->LoadFromFile( g_pFullFileSystem, tempfile, "GAME" ) )
 	{
-		/* BM: I'd like to decouple the map overviews from the radar but for now, I'm suppressing this error message. */
+		/* Suppressing error message. */
 #if defined( CSTRIKE_DLL )
 		DevMsg( 1, "Error! CMapOverview::SetMap: couldn't load file %s.\n", tempfile );
 #endif // CSTRIKE_DLL

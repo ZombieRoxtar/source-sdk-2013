@@ -845,7 +845,7 @@ CHLClient::CHLClient()
 
 extern IGameSystem *ViewportClientSystem();
 
-/* BM: https://developer.valvesoftware.com/wiki/Mounting_multiple_games */
+/* Allow additional content to mount */
 static void MountAdditionalContent()
 {
 	KeyValues *pMainFile = new KeyValues("gameinfo.txt");
@@ -873,7 +873,6 @@ static void MountAdditionalContent()
 	}
 	pMainFile->deleteThis();
 }
-//*/
 
 //-----------------------------------------------------------------------------
 ISourceVirtualReality *g_pSourceVR = NULL;
@@ -990,7 +989,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 		return false;
 	}
 
-	/* BM: Called it; see above */
 	MountAdditionalContent();
 
 	if ( CommandLine()->FindParm( "-textmode" ) )

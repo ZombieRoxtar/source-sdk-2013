@@ -565,7 +565,7 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CServerGameDLL, IServerGameDLL, INTERFACEVERSI
 // When bumping the version to this interface, check that our assumption is still valid and expose the older version in the same way
 COMPILE_TIME_ASSERT( INTERFACEVERSION_SERVERGAMEDLL_INT == 9 );
 
-/* BM: https://developer.valvesoftware.com/wiki/Mounting_multiple_games */
+/* Mount multiple games' content */
 static void MountAdditionalContent()
 {
 	KeyValues *pMainFile = new KeyValues("gameinfo.txt");
@@ -667,7 +667,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	if ( !soundemitterbase->Connect( appSystemFactory ) )
 		return false;
 
-	/* BM: Called it; see above */
 	MountAdditionalContent();
 
 	// cache the globals
@@ -2039,7 +2038,7 @@ void CServerGameDLL::LoadSpecificMOTDMsg( const ConVar &convar, const char *pszS
 		bFound = filesystem->ReadFile( szResolvedFilename, "GAME", buf );
 	}
 
-	/* BM: No MOtDs in SP; so quit complaining about it! */
+/* No MOtD in SP, so quit complaining about it! */
 #ifdef HL2MP
 	if ( !bFound )
 	{
@@ -2063,7 +2062,6 @@ void CServerGameDLL::LoadSpecificMOTDMsg( const ConVar &convar, const char *pszS
 		Msg( "Set %s from file '%s'.  ('%s' was not found.)\n", pszStringName, szResolvedFilename, szPreferredFilename );
 	}
 #endif // HL2MP
-	//*/
 
 	g_pStringTableInfoPanel->AddString( CBaseEntity::IsServer(), pszStringName, buf.TellPut(), buf.Base() );
 #endif
