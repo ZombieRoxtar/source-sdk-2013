@@ -62,3 +62,7 @@ config.cfg
 
 sp/game/
 .vs/
+
+sp/src/game/server/Debug_mod_episodic/server_episodic.vcxproj.FileListAbsolute.txt
+
+sp/src/game/client/Debug_mod_episodic/client_episodic.vcxproj.FileListAbsolute.txt
