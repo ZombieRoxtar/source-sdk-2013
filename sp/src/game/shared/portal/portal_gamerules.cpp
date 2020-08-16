@@ -21,7 +21,7 @@
 	#include "portal_player.h"
 	#include "globalstate.h"
 	#include "ai_basenpc.h"
-	#include "portal/weapon_physcannon.h"
+	#include "weapon_physcannon.h"
 	#include "props.h"		// For props flags used in making the portal weight box
 	#include "datacache/imdlcache.h"	// For precaching box model
 
@@ -35,6 +35,7 @@
 
 
 
+#ifndef PORTAL
 REGISTER_GAMERULES_CLASS( CPortalGameRules );
 
 BEGIN_NETWORK_TABLE_NOBASE( CPortalGameRules, DT_PortalGameRules )
@@ -1282,3 +1283,4 @@ CAmmoDef *GetAmmoDef()
 	return &def;
 }
 
+#endif

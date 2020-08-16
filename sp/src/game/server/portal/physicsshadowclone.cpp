@@ -12,7 +12,7 @@
 #include "trains.h"
 #include "props.h"
 #include "model_types.h"
-#include "portal/weapon_physcannon.h" //grab controllers
+#include "weapon_physcannon.h" //grab controllers
 
 #include "PortalSimulation.h"
 

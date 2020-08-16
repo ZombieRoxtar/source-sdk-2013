@@ -140,7 +140,7 @@ public:
 	int GetLastFiredPortal( void ) { return m_iLastFiredPortal; }
 	bool IsHoldingObject( void ) { return m_bOpenProngs; }
 
-	bool Reload( void );
+	bool Reload(void) { return true; }
 	void FillClip( void );
 	void CheckHolsterReload( void );
 	void ItemHolsterFrame( void );

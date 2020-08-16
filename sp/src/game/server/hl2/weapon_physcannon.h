@@ -3,6 +3,9 @@
 // Purpose: 
 //
 //=============================================================================//
+#ifdef PORTAL
+#include "portal/weapon_physcannon.h"
+#else
 
 #ifndef WEAPON_PHYSCANNON_H
 #define WEAPON_PHYSCANNON_H
@@ -31,3 +34,5 @@ CBaseEntity *GetPlayerHeldEntity( CBasePlayer *pPlayer );
 bool PhysCannonAccountableForObject( CBaseCombatWeapon *pPhysCannon, CBaseEntity *pObject );
 
 #endif // WEAPON_PHYSCANNON_H
+
+#endif //PORTAL

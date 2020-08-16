@@ -14,7 +14,7 @@
 #include "prop_portal_shared.h"
 #include "portal_shareddefs.h"
 #include "physobj.h"
-#include "portal/weapon_physcannon.h"
+#include "weapon_physcannon.h"
 #include "model_types.h"
 #include "rumble_shared.h"
 

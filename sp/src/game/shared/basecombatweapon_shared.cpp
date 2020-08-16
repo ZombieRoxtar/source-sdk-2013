@@ -1009,6 +1009,7 @@ void CBaseCombatWeapon::SetActivity( Activity act, float duration )
 { 
 	//Adrian: Oh man...
 #if !defined( CLIENT_DLL ) && (defined( HL2MP ) || defined( PORTAL ))
+	if (GetOwner()->IsPlayer())
 	SetModel( GetWorldModel() );
 #endif
 	
@@ -1020,6 +1021,7 @@ void CBaseCombatWeapon::SetActivity( Activity act, float duration )
 
 	//Adrian: Oh man again...
 #if !defined( CLIENT_DLL ) && (defined( HL2MP ) || defined( PORTAL ))
+	if (GetOwner()->IsPlayer())
 	SetModel( GetViewModel() );
 #endif
 

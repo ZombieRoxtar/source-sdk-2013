@@ -6,6 +6,9 @@
 
 #include "cbase.h"
 #include "player.h"
+#include "weapon_portalgun.h"
+#include "prop_portal_shared.h"
+#include "portal_util_shared.h"
 #include "gamerules.h"
 #include "soundenvelope.h"
 #include "engine/IEngineSound.h"
@@ -15,6 +18,7 @@
 #include "IEffects.h"
 #include "ndebugoverlay.h"
 #include "shake.h"
+#include "portal_player.h"
 #include "hl2_player.h"
 #include "beam_shared.h"
 #include "Sprite.h"
@@ -27,7 +31,7 @@
 #include "globalstate.h"
 #include "props.h"
 #include "movevars_shared.h"
-#include "basehlcombatweapon.h"
+#include "weapon_portalbasecombatweapon.h"
 #include "te_effect_dispatch.h"
 #include "vphysics/friction.h"
 #include "saverestore_utlvector.h"
@@ -46,7 +50,6 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-#ifndef PORTAL
 static const char *s_pWaitForUpgradeContext = "WaitForUpgrade";
 
 ConVar	g_debug_physcannon( "g_debug_physcannon", "0" );
@@ -64,7 +67,6 @@ ConVar physcannon_ball_cone( "physcannon_ball_cone", "0.997" );
 ConVar physcannon_punt_cone( "physcannon_punt_cone", "0.997" );
 ConVar player_throwforce( "player_throwforce", "1000" );
 ConVar physcannon_dmg_glass( "physcannon_dmg_glass", "15" );
-ConVar physcannon_right_turrets( "physcannon_right_turrets", "0" );
 
 extern ConVar hl2_normspeed;
 extern ConVar hl2_walkspeed;
@@ -473,6 +475,7 @@ public:
 	bool UpdateObject( CBasePlayer *pPlayer, float flError );
 
 	void SetTargetPosition( const Vector &target, const QAngle &targetOrientation );
+	void GetTargetPosition( Vector *target, QAngle *targetOrientation );
 	float ComputeError();
 	float GetLoadWeight( void ) const { return m_flLoadWeight; }
 	void SetAngleAlignment( float alignAngleCosine ) { m_angleAlignment = alignAngleCosine; }
@@ -486,6 +489,9 @@ public:
 	float GetSavedMass( IPhysicsObject *pObject );
 
 	bool IsObjectAllowedOverhead( CBaseEntity *pEntity );
+
+	//set when a held entity is penetrating another through a portal. Needed for special fixes
+	void SetPortalPenetratingEntity( CBaseEntity *pPenetrated );
 
 private:
 	// Compute the max speed for an attached object
@@ -513,12 +519,16 @@ private:
 
 	IPhysicsMotionController *m_controller;
 
-	bool			m_bAllowObjectOverhead; // Can the player hold this object directly overhead? (Default is NO)
-
 	// NVNT player controlling this grab controller
 	CBasePlayer*	m_pControllingPlayer;
 
+	bool			m_bAllowObjectOverhead; // Can the player hold this object directly overhead? (Default is NO)
+
+	//set when a held entity is penetrating another through a portal. Needed for special fixes
+	EHANDLE			m_PenetratedEntity;
+
 	friend class CWeaponPhysCannon;
+	friend void GetSavedParamsForCarriedPhysObject( CGrabController *pGrabController, IPhysicsObject *pObject, float *pSavedMassOut, float *pSavedRotationalDampingOut );
 };
 
 BEGIN_SIMPLE_DATADESC( CGrabController )
@@ -606,6 +616,14 @@ void CGrabController::SetTargetPosition( const Vector &target, const QAngle &tar
 	}
 }
 
+void CGrabController::GetTargetPosition( Vector *target, QAngle *targetOrientation )
+{
+	if ( target )
+		*target = m_shadow.targetPosition;
+
+	if ( targetOrientation )
+		*targetOrientation = m_shadow.targetRotation;
+}
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Output : float
@@ -651,6 +669,35 @@ float CGrabController::ComputeError()
 	if ( pAttached->IsEFlagSet( EFL_IS_BEING_LIFTED_BY_BARNACLE ) )
 	{
 		m_error *= 3.0f;
+	}
+
+	// If held across a portal but not looking at the portal multiply error
+	CPortal_Player *pPortalPlayer = (CPortal_Player *)GetPlayerHoldingEntity( pAttached );
+	Assert( pPortalPlayer );
+	if ( pPortalPlayer->IsHeldObjectOnOppositeSideOfPortal() )
+	{
+		Vector forward, right, up;
+		QAngle playerAngles = pPortalPlayer->EyeAngles();
+
+		float pitch = AngleDistance(playerAngles.x,0);
+		playerAngles.x = clamp( pitch, -75, 75 );
+		AngleVectors( playerAngles, &forward, &right, &up );
+
+		Vector start = pPortalPlayer->Weapon_ShootPosition();
+
+		// If the player is upside down then we need to hold the box closer to their feet.
+		if ( up.z < 0.0f )
+			start += pPortalPlayer->GetViewOffset() * up.z;
+		if ( right.z < 0.0f )
+			start += pPortalPlayer->GetViewOffset() * right.z;
+
+		Ray_t rayPortalTest;
+		rayPortalTest.Init( start, start + forward * 256.0f );
+
+		if ( UTIL_IntersectRayWithPortal( rayPortalTest, pPortalPlayer->GetHeldObjectPortal() ) < 0.0f )
+		{
+			m_error *= 2.5f;
+		}
 	}
 
 	m_errorTime = 0;
@@ -721,17 +768,78 @@ QAngle CGrabController::TransformAnglesFromPlayerSpace( const QAngle &anglesIn, 
 
 void CGrabController::AttachEntity( CBasePlayer *pPlayer, CBaseEntity *pEntity, IPhysicsObject *pPhys, bool bIsMegaPhysCannon, const Vector &vGrabPosition, bool bUseGrabPosition )
 {
+	CPortal_Player *pPortalPlayer = ToPortalPlayer( pPlayer );
 	// play the impact sound of the object hitting the player
 	// used as feedback to let the player know he picked up the object
-	int hitMaterial = pPhys->GetMaterialIndex();
-	int playerMaterial = pPlayer->VPhysicsGetObject() ? pPlayer->VPhysicsGetObject()->GetMaterialIndex() : hitMaterial;
-	PhysicsImpactSound( pPlayer, pPhys, CHAN_STATIC, hitMaterial, playerMaterial, 1.0, 64 );
+	if ( !pPortalPlayer->m_bSilentDropAndPickup )
+	{
+		int hitMaterial = pPhys->GetMaterialIndex();
+		int playerMaterial = pPlayer->VPhysicsGetObject() ? pPlayer->VPhysicsGetObject()->GetMaterialIndex() : hitMaterial;
+		PhysicsImpactSound( pPlayer, pPhys, CHAN_STATIC, hitMaterial, playerMaterial, 1.0, 64 );
+	}
 	Vector position;
 	QAngle angles;
 	pPhys->GetPosition( &position, &angles );
 	// If it has a preferred orientation, use that instead.
 	Pickup_GetPreferredCarryAngles( pEntity, pPlayer, pPlayer->EntityToWorldTransform(), angles );
 
+	//Fix attachment orientation weirdness
+	if( pPortalPlayer->IsHeldObjectOnOppositeSideOfPortal() )
+	{
+		Vector vPlayerForward;
+		pPlayer->EyeVectors( &vPlayerForward );
+
+		Vector radial = physcollision->CollideGetExtent( pPhys->GetCollide(), vec3_origin, pEntity->GetAbsAngles(), -vPlayerForward );
+		Vector player2d = pPlayer->CollisionProp()->OBBMaxs();
+		float playerRadius = player2d.Length2D();
+		float flDot = DotProduct( vPlayerForward, radial );
+
+		float radius = playerRadius + fabs( flDot );
+
+		float distance = 24 + ( radius * 2.0f );		
+
+		//find out which portal the object is on the other side of....
+		Vector start = pPlayer->Weapon_ShootPosition();		
+		Vector end = start + ( vPlayerForward * distance );
+
+		CProp_Portal *pObjectPortal = NULL;
+		pObjectPortal = pPortalPlayer->GetHeldObjectPortal();
+
+		// If our end point hasn't gone into the portal yet we at least need to know what portal is in front of us
+		if ( !pObjectPortal )
+		{
+			Ray_t rayPortalTest;
+			rayPortalTest.Init( start, start + vPlayerForward * 1024.0f );
+
+			int iPortalCount = CProp_Portal_Shared::AllPortals.Count();
+			if( iPortalCount != 0 )
+			{
+				CProp_Portal **pPortals = CProp_Portal_Shared::AllPortals.Base();
+				float fMinDist = 2.0f;
+				for( int i = 0; i != iPortalCount; ++i )
+				{
+					CProp_Portal *pTempPortal = pPortals[i];
+					if( pTempPortal->m_bActivated &&
+						(pTempPortal->m_hLinkedPortal.Get() != NULL) )
+					{
+						float fDist = UTIL_IntersectRayWithPortal( rayPortalTest, pTempPortal );
+						if( (fDist >= 0.0f) && (fDist < fMinDist) )
+						{
+							fMinDist = fDist;
+							pObjectPortal = pTempPortal;
+						}
+					}
+				}
+			}
+		}
+
+		if( pObjectPortal )
+		{
+			UTIL_Portal_AngleTransform( pObjectPortal->m_hLinkedPortal->MatrixThisToLinked(), angles, angles );
+		}
+	}
+
+	VectorITransform( pEntity->WorldSpaceCenter(), pEntity->EntityToWorldTransform(), m_attachedPositionObjectSpace );
 //	ComputeMaxSpeed( pEntity, pPhys );
 
 	// If we haven't been killed by a grab, we allow the gun to grab the nearest part of a ragdoll
@@ -965,6 +1073,14 @@ bool CGrabController::IsObjectAllowedOverhead( CBaseEntity *pEntity )
 	return false;
 }
 
+
+
+
+void CGrabController::SetPortalPenetratingEntity( CBaseEntity *pPenetrated )
+{
+	m_PenetratedEntity = pPenetrated;
+}
+
 //-----------------------------------------------------------------------------
 // Player pickup controller
 //-----------------------------------------------------------------------------
@@ -1018,14 +1134,23 @@ void CPlayerPickupController::Init( CBasePlayer *pPlayer, CBaseEntity *pObject )
 	// Holster player's weapon
 	if ( pPlayer->GetActiveWeapon() )
 	{
-		if ( !pPlayer->GetActiveWeapon()->CanHolster() || !pPlayer->GetActiveWeapon()->Holster() )
+		// Don't holster the portalgun
+		if ( FClassnameIs( pPlayer->GetActiveWeapon(), "weapon_portalgun" ) )
 		{
-			Shutdown();
-			return;
+			CWeaponPortalgun *pPortalGun = (CWeaponPortalgun*)(pPlayer->GetActiveWeapon());
+			pPortalGun->OpenProngs( true );
+		}
+		else
+		{
+			if ( !pPlayer->GetActiveWeapon()->Holster() )
+			{
+				Shutdown();
+				return;
+			}
 		}
 	}
 
-	CHL2_Player *pOwner = (CHL2_Player *)ToBasePlayer( pPlayer );
+	CPortal_Player *pOwner = ToPortalPlayer( pPlayer );
 	if ( pOwner )
 	{
 		pOwner->EnableSprint( false );
@@ -1045,14 +1170,16 @@ void CPlayerPickupController::Init( CBasePlayer *pPlayer, CBaseEntity *pObject )
 	m_pPlayer = pPlayer;
 	IPhysicsObject *pPhysics = pObject->VPhysicsGetObject();
 	
+	if ( !pOwner->m_bSilentDropAndPickup )
+	{
 	Pickup_OnPhysGunPickup( pObject, m_pPlayer, PICKED_UP_BY_PLAYER );
+	}
 	
 	m_grabController.AttachEntity( pPlayer, pObject, pPhysics, false, vec3_origin, false );
+#ifdef WIN32
 	// NVNT apply a downward force to simulate the mass of the held object.
-#if defined( WIN32 ) && !defined( _X360 )
 	HapticSetConstantForce(m_pPlayer,clamp(m_grabController.GetLoadWeight()*0.1,1,6)*Vector(0,-1,0));
-#endif
-	
+#endif	
 	m_pPlayer->m_Local.m_iHideHUD |= HIDEHUD_WEAPONSELECTION;
 	m_pPlayer->SetUseEntity( this );
 }
@@ -1073,37 +1200,53 @@ void CPlayerPickupController::Shutdown( bool bThrown )
 	}
 
 	m_grabController.DetachEntity( bClearVelocity );
+#ifdef WIN32
 	// NVNT if we have a player, issue a zero constant force message
-#if defined( WIN32 ) && !defined( _X360 )
 	if(m_pPlayer)
 		HapticSetConstantForce(m_pPlayer,Vector(0,0,0));
 #endif
 	if ( pObject != NULL )
 	{
-		Pickup_OnPhysGunDrop( pObject, m_pPlayer, bThrown ? THROWN_BY_PLAYER : DROPPED_BY_PLAYER );
+		if ( !ToPortalPlayer( m_pPlayer )->m_bSilentDropAndPickup )
+		{
+			Pickup_OnPhysGunDrop( pObject, m_pPlayer, bThrown ? THROWN_BY_PLAYER : DROPPED_BY_PLAYER );
+		}
 	}
 
 	if ( m_pPlayer )
 	{
-		CHL2_Player *pOwner = (CHL2_Player *)ToBasePlayer( m_pPlayer );
+		CPortal_Player *pOwner = ToPortalPlayer( m_pPlayer );
 		if ( pOwner )
 		{
 			pOwner->EnableSprint( true );
 		}
 
 		m_pPlayer->SetUseEntity( NULL );
-		if ( m_pPlayer->GetActiveWeapon() )
+		if ( !pOwner->m_bSilentDropAndPickup )
 		{
-			if ( !m_pPlayer->GetActiveWeapon()->Deploy() )
+			if ( m_pPlayer->GetActiveWeapon() )
 			{
-				// We tried to restore the player's weapon, but we couldn't.
-				// This usually happens when they're holding an empty weapon that doesn't
-				// autoswitch away when out of ammo. Switch to next best weapon.
-				m_pPlayer->SwitchToNextBestWeapon( NULL );
+				if ( FClassnameIs( m_pPlayer->GetActiveWeapon(), "weapon_portalgun" ) )
+				{
+					m_pPlayer->SetNextAttack( gpGlobals->curtime + 0.5f );
+					CWeaponPortalgun *pPortalGun = (CWeaponPortalgun*)(m_pPlayer->GetActiveWeapon());
+					pPortalGun->DelayAttack( 0.5f );
+					pPortalGun->OpenProngs( false );
+				}
+				else
+				{
+					if ( !m_pPlayer->GetActiveWeapon()->Deploy() )
+					{
+						// We tried to restore the player's weapon, but we couldn't.
+						// This usually happens when they're holding an empty weapon that doesn't
+						// autoswitch away when out of ammo. Switch to next best weapon.
+						m_pPlayer->SwitchToNextBestWeapon( NULL );
+					}
+				}
 			}
-		}
 
-		m_pPlayer->m_Local.m_iHideHUD &= ~HIDEHUD_WEAPONSELECTION;
+			m_pPlayer->m_Local.m_iHideHUD &= ~HIDEHUD_WEAPONSELECTION;
+		}
 	}
 	Remove();
 }
@@ -1146,6 +1289,14 @@ void CPlayerPickupController::Use( CBaseEntity *pActivator, CBaseEntity *pCaller
 			Shutdown( true );
 			Vector vecLaunch;
 			m_pPlayer->EyeVectors( &vecLaunch );
+			// If throwing from the opposite side of a portal, reorient the direction
+			if( ((CPortal_Player *)m_pPlayer)->IsHeldObjectOnOppositeSideOfPortal() )
+			{
+				CProp_Portal *pHeldPortal = ((CPortal_Player *)m_pPlayer)->GetHeldObjectPortal();
+				UTIL_Portal_VectorTransform( pHeldPortal->MatrixThisToLinked(), vecLaunch, vecLaunch );
+			}
+
+			((CPortal_Player *)m_pPlayer)->SetHeldObjectOnOppositeSideOfPortal( false );
 			// JAY: Scale this with mass because some small objects really go flying
 			float massFactor = clamp( pPhys->GetMass(), 0.5, 15 );
 			massFactor = RemapVal( massFactor, 0.5, 15, 0.5, 4 );
@@ -1172,14 +1323,22 @@ void CPlayerPickupController::Use( CBaseEntity *pActivator, CBaseEntity *pCaller
 //-----------------------------------------------------------------------------
 bool CPlayerPickupController::IsHoldingEntity( CBaseEntity *pEnt )
 {
-	return ( m_grabController.GetAttached() == pEnt );
+	if ( pEnt )
+	{
+		return ( m_grabController.GetAttached() == pEnt );
+	}
+
+	return ( m_grabController.GetAttached() != 0 );
 }
 
 void PlayerPickupObject( CBasePlayer *pPlayer, CBaseEntity *pObject )
 {
 	//Don't pick up if we don't have a phys object.
 	if ( pObject->VPhysicsGetObject() == NULL )
-		 return;
+		return;
+
+	if ( pObject->GetBaseAnimating() && pObject->GetBaseAnimating()->IsDissolving() )
+		return;
 
 	CPlayerPickupController *pController = (CPlayerPickupController *)CBaseEntity::Create( "player_pickup", pObject->GetAbsOrigin(), vec3_angle, pPlayer );
 	
@@ -1211,10 +1370,10 @@ BEGIN_SIMPLE_DATADESC( thrown_objects_t )
 	DEFINE_FIELD( hEntity,	FIELD_EHANDLE	),
 END_DATADESC()
 
-class CWeaponPhysCannon : public CBaseHLCombatWeapon
+class CWeaponPhysCannon : public CBasePortalCombatWeapon
 {
 public:
-	DECLARE_CLASS( CWeaponPhysCannon, CBaseHLCombatWeapon );
+	DECLARE_CLASS( CWeaponPhysCannon, CBasePortalCombatWeapon );
 
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
@@ -1348,7 +1507,6 @@ protected:
 	int		m_nAttack2Debounce;
 
 	CNetworkVar( bool, m_bIsCurrentlyUpgrading );
-	CNetworkVar( float, m_flTimeForceView );
 
 	float	m_flElementDebounce;
 	float	m_flElementPosition;
@@ -1373,25 +1531,10 @@ protected:
 	CUtlVector< thrown_objects_t >	m_ThrownEntities;
 
 	float				m_flTimeNextObjectPurge;
-
-protected:
-	// Because the physcannon is a leaf class, we can use
-	// static variables to store this information, and save some memory.
-	// Should the physcannon end up having inheritors, their activate may
-	// stomp these numbers, in which case you should make these ordinary members
-	// again.
-	//
-	// The physcannon also caches some pose parameters in SetupGlobalModelData().
-	static int m_poseActive;
-	static bool m_sbStaticPoseParamsLoaded;
 };
-
-bool CWeaponPhysCannon::m_sbStaticPoseParamsLoaded = false;
-int CWeaponPhysCannon::m_poseActive = 0;
 
 IMPLEMENT_SERVERCLASS_ST(CWeaponPhysCannon, DT_WeaponPhysCannon)
 	SendPropBool( SENDINFO( m_bIsCurrentlyUpgrading ) ),
-	SendPropFloat( SENDINFO( m_flTimeForceView ) ),
 END_SEND_TABLE()
 
 LINK_ENTITY_TO_CLASS( weapon_physcannon, CWeaponPhysCannon );
@@ -1409,7 +1552,6 @@ BEGIN_DATADESC( CWeaponPhysCannon )
 	DEFINE_FIELD( m_flElementDestination, FIELD_FLOAT ),
 	DEFINE_FIELD( m_nAttack2Debounce, FIELD_INTEGER ),
 	DEFINE_FIELD( m_bIsCurrentlyUpgrading, FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_flTimeForceView, FIELD_TIME ),
 	DEFINE_FIELD( m_EffectState, FIELD_INTEGER ),
 
 	DEFINE_AUTO_ARRAY( m_hBeams, FIELD_EHANDLE ),
@@ -1534,8 +1676,6 @@ void CWeaponPhysCannon::Spawn( void )
 	{
 		m_nSkin = MEGACANNON_SKIN;
 	}
-
-	m_flTimeForceView = -1;
 }
 
 
@@ -1556,6 +1696,7 @@ void CWeaponPhysCannon::OnRestore()
 		DoEffect( m_EffectState, NULL );
 	}
 }
+
 
 //-----------------------------------------------------------------------------
 // On Remove
@@ -1683,9 +1824,8 @@ bool CWeaponPhysCannon::Holster( CBaseCombatWeapon *pSwitchingTo )
 	//Don't holster this weapon if we're holding onto something
 	if ( m_bActive )
 	{
-		if ( !pSwitchingTo ||
-			( m_grabController.GetAttached() == pSwitchingTo && 
-			GetOwner()->Weapon_OwnsThisType( pSwitchingTo->GetClassname(), pSwitchingTo->GetSubType()) ) )
+		if ( m_grabController.GetAttached() == pSwitchingTo && 
+			GetOwner()->Weapon_OwnsThisType( pSwitchingTo->GetClassname(), pSwitchingTo->GetSubType()) )
 		{
 		
 		}
@@ -1804,7 +1944,7 @@ void CWeaponPhysCannon::Physgun_OnPhysGunPickup( CBaseEntity *pEntity, CBasePlay
 		pOwner->RumbleEffect( RUMBLE_357, 0, RUMBLE_FLAGS_NONE );
 		RecordThrownObject( pEntity );
 	}
-
+	/*
 	// Warn Alyx if the player is punting a car around.
 	if( hl2_episodic.GetBool() && mass > 250.0f )
 	{
@@ -1819,7 +1959,7 @@ void CWeaponPhysCannon::Physgun_OnPhysGunPickup( CBaseEntity *pEntity, CBasePlay
 			}
 		}
 	}
-
+	//*/
 	Pickup_OnPhysGunPickup( pEntity, pOwner, reason );
 }
 
@@ -2128,7 +2268,7 @@ void CWeaponPhysCannon::PrimaryAttack( void )
 
 		if ( pHeld != NULL )
 		{
-			float heldDist = pHeld->CollisionProp()->CalcDistanceFromPoint(pOwner->WorldSpaceCenter() );
+			float heldDist = ( pHeld->WorldSpaceCenter() - pOwner->WorldSpaceCenter() ).Length();
 
 			if ( heldDist > physcannon_tracelength.GetFloat() )
 			{
@@ -2202,6 +2342,12 @@ void CWeaponPhysCannon::PrimaryAttack( void )
 		}
 	}
 
+	if ( ToPortalPlayer( pOwner )->IsHeldObjectOnOppositeSideOfPortal() )
+	{
+		CProp_Portal *pPortal = ToPortalPlayer( pOwner )->GetHeldObjectPortal();
+		UTIL_Portal_VectorTransform( pPortal->MatrixThisToLinked(), forward, forward );
+	}
+
 	if( !bValid )
 	{
 		DryFire();
@@ -2216,7 +2362,7 @@ void CWeaponPhysCannon::PrimaryAttack( void )
 			DryFire();
 			return;
 		}
-
+		/*
 		if( GetOwner()->IsPlayer() && !IsMegaPhysCannon() )
 		{
 			// Don't let the player zap any NPC's except regular antlions and headcrabs.
@@ -2226,7 +2372,7 @@ void CWeaponPhysCannon::PrimaryAttack( void )
 				return;
 			}
 		}
-
+		//*/
 		if ( IsMegaPhysCannon() )
 		{
 			if ( pEntity->IsNPC() && !pEntity->IsEFlagSet( EFL_NO_MEGAPHYSCANNON_RAGDOLL ) && pEntity->MyNPCPointer()->CanBecomeRagdoll() )
@@ -2399,7 +2545,7 @@ bool CWeaponPhysCannon::AttachObject( CBaseEntity *pObject, const Vector &vPosit
 	if ( !pPhysics )
 		return false;
 
-	CHL2_Player *pOwner = (CHL2_Player *)ToBasePlayer( GetOwner() );
+	CPortal_Player *pOwner = ToPortalPlayer( GetOwner() );
 
 	m_bActive = true;
 	if( pOwner )
@@ -2422,7 +2568,7 @@ bool CWeaponPhysCannon::AttachObject( CBaseEntity *pObject, const Vector &vPosit
 
 	if( pOwner )
 	{
-#if defined( WIN32 ) && !defined( _X360 )
+#ifdef WIN32
 		// NVNT set the players constant force to simulate holding mass
 		HapticSetConstantForce(pOwner,clamp(m_grabController.GetLoadWeight()*0.05,1,5)*Vector(0,-1,0));
 #endif
@@ -2447,23 +2593,6 @@ bool CWeaponPhysCannon::AttachObject( CBaseEntity *pObject, const Vector &vPosit
 		(CSoundEnvelopeController::GetController()).SoundChangePitch( GetMotorSound(), 100, 0.5f );
 		(CSoundEnvelopeController::GetController()).SoundChangeVolume( GetMotorSound(), 0.8f, 0.5f );
 	}
-
-#if defined(HL2_DLL)
-	if( physcannon_right_turrets.GetBool() && pObject->ClassMatches("npc_turret_floor") )
-	{
-		// We just picked up a turret. Is it already upright?
-		Vector vecUp;
-		Vector vecTrueUp(0,0,1);
-		pObject->GetVectors( NULL, NULL, &vecUp );
-		float flDot = DotProduct( vecUp, vecTrueUp );
-
-		if( flDot < 0.5f )
-		{
-			// The turret is NOT upright, so have the client help us by raising up the player's view.
-			m_flTimeForceView = gpGlobals->curtime + 1.0f;
-		}
-	}
-#endif
 
 	return true;
 }
@@ -2503,6 +2632,13 @@ CWeaponPhysCannon::FindObjectResult_t CWeaponPhysCannon::FindObject( void )
 	if ( pPlayer == NULL )
 		return OBJECT_NOT_FOUND;
 	
+	Vector forward;
+	pPlayer->EyeVectors( &forward );
+
+	// Setup our positions
+	Vector	start = pPlayer->Weapon_ShootPosition();
+	float	testLength = TraceLength() * 4.0f;
+	Vector	end = start + forward * testLength;
 	trace_t tr;
 	FindObjectTrace( pPlayer, &tr );
 	CBaseEntity *pEntity = tr.m_pEnt ? tr.m_pEnt->GetRootMoveParent() : NULL;
@@ -2523,12 +2659,6 @@ CWeaponPhysCannon::FindObjectResult_t CWeaponPhysCannon::FindObject( void )
 		}
 	}
 	
-	Vector forward;
-	pPlayer->EyeVectors( &forward );
-
-	// Setup our positions
-	Vector	start = pPlayer->Weapon_ShootPosition();
-	float	testLength = TraceLength() * 4.0f;
 
 	// Find anything within a general cone in front
 	CBaseEntity *pConeEntity = NULL;
@@ -2731,6 +2861,17 @@ CBaseEntity *CWeaponPhysCannon::FindObjectInCone( const Vector &vecOrigin, const
 //-----------------------------------------------------------------------------
 bool CGrabController::UpdateObject( CBasePlayer *pPlayer, float flError )
 {
+	CBaseEntity *pPenetratedEntity = m_PenetratedEntity.Get();
+	if( pPenetratedEntity )
+	{
+		//FindClosestPassableSpace( pPenetratedEntity, Vector( 0.0f, 0.0f, 1.0f ) );
+		IPhysicsObject *pPhysObject = pPenetratedEntity->VPhysicsGetObject();
+		if( pPhysObject )
+			pPhysObject->Wake();
+
+		m_PenetratedEntity = NULL; //assume we won
+	}
+
  	CBaseEntity *pEntity = GetAttached();
 	if ( !pEntity || ComputeError() > flError || pPlayer->GetGroundEntity() == pEntity || !pEntity->VPhysicsGetObject() )
 	{
@@ -2746,6 +2887,15 @@ bool CGrabController::UpdateObject( CBasePlayer *pPlayer, float flError )
 
 	Vector forward, right, up;
 	QAngle playerAngles = pPlayer->EyeAngles();
+	float pitch = AngleDistance(playerAngles.x,0);
+	if( !m_bAllowObjectOverhead )
+	{
+		playerAngles.x = clamp( pitch, -75, 75 );
+	}
+	else
+	{
+		playerAngles.x = clamp( pitch, -90, 75 );
+	}
 	AngleVectors( playerAngles, &forward, &right, &up );
 
 	if ( HL2GameRules()->MegaPhyscannonActive() )
@@ -2760,38 +2910,106 @@ bool CGrabController::UpdateObject( CBasePlayer *pPlayer, float flError )
 			return false;
 	}
 	
-	float pitch = AngleDistance(playerAngles.x,0);
 
-	if( !m_bAllowObjectOverhead )
+
+	
+	
+	Vector start = pPlayer->Weapon_ShootPosition();
+
+	// If the player is upside down then we need to hold the box closer to their feet.
+	if ( up.z < 0.0f )
+		start += pPlayer->GetViewOffset() * up.z;
+	if ( right.z < 0.0f )
+		start += pPlayer->GetViewOffset() * right.z;
+
+	CPortal_Player *pPortalPlayer = ToPortalPlayer( pPlayer );
+
+	// Find out if it's being held across a portal
+	bool bLookingAtHeldPortal = true;
+	CProp_Portal *pPortal = pPortalPlayer->GetHeldObjectPortal();
+
+	if ( !pPortal )
 	{
-		playerAngles.x = clamp( pitch, -75, 75 );
+		// If the portal is invalid make sure we don't try to hold it across the portal
+		pPortalPlayer->SetHeldObjectOnOppositeSideOfPortal( false );
+	}
+
+	if ( pPortalPlayer->IsHeldObjectOnOppositeSideOfPortal() )
+	{
+		Ray_t rayPortalTest;
+		rayPortalTest.Init( start, start + forward * 1024.0f );
+
+		// Check if we're looking at the portal we're holding through
+		if ( pPortal )
+		{
+			if ( UTIL_IntersectRayWithPortal( rayPortalTest, pPortal ) < 0.0f )
+			{
+				bLookingAtHeldPortal = false;
+			}
+		}
+		// If our end point hasn't gone into the portal yet we at least need to know what portal is in front of us
+		else
+		{
+			int iPortalCount = CProp_Portal_Shared::AllPortals.Count();
+			if( iPortalCount != 0 )
+			{
+				CProp_Portal **pPortals = CProp_Portal_Shared::AllPortals.Base();
+				float fMinDist = 2.0f;
+				for( int i = 0; i != iPortalCount; ++i )
+				{
+					CProp_Portal *pTempPortal = pPortals[i];
+					if( pTempPortal->m_bActivated &&
+						(pTempPortal->m_hLinkedPortal.Get() != NULL) )
+					{
+						float fDist = UTIL_IntersectRayWithPortal( rayPortalTest, pTempPortal );
+						if( (fDist >= 0.0f) && (fDist < fMinDist) )
+						{
+							fMinDist = fDist;
+							pPortal = pTempPortal;
+						}
+					}
+				}
+			}
+		}
 	}
 	else
 	{
-		playerAngles.x = clamp( pitch, -90, 75 );
+		pPortal = NULL;
 	}
 
-	
-	
+	QAngle qEntityAngles = pEntity->GetAbsAngles();
+
+	if ( pPortal )
+	{
+		// If the portal isn't linked we need to drop the object
+		if ( !pPortal->m_hLinkedPortal.Get() )
+		{
+			pPlayer->ForceDropOfCarriedPhysObjects();
+			return false;
+		}
+
+		UTIL_Portal_AngleTransform( pPortal->m_hLinkedPortal->MatrixThisToLinked(), qEntityAngles, qEntityAngles );
+	}
 	// Now clamp a sphere of object radius at end to the player's bbox
-	Vector radial = physcollision->CollideGetExtent( pPhys->GetCollide(), vec3_origin, pEntity->GetAbsAngles(), -forward );
+	Vector radial = physcollision->CollideGetExtent( pPhys->GetCollide(), vec3_origin, qEntityAngles, -forward );
 	Vector player2d = pPlayer->CollisionProp()->OBBMaxs();
 	float playerRadius = player2d.Length2D();
-	float radius = playerRadius + fabs(DotProduct( forward, radial ));
+
+	float radius = playerRadius + radial.Length();
 
 	float distance = 24 + ( radius * 2.0f );
 
 	// Add the prop's distance offset
 	distance += m_flDistanceOffset;
 
-	Vector start = pPlayer->Weapon_ShootPosition();
 	Vector end = start + ( forward * distance );
 
 	trace_t	tr;
 	CTraceFilterSkipTwoEntities traceFilter( pPlayer, pEntity, COLLISION_GROUP_NONE );
 	Ray_t ray;
 	ray.Init( start, end );
-	enginetrace->TraceRay( ray, MASK_SOLID_BRUSHONLY, &traceFilter, &tr );
+	//enginetrace->TraceRay( ray, MASK_SOLID_BRUSHONLY, &traceFilter, &tr );
+	UTIL_Portal_TraceRay( ray, MASK_SOLID_BRUSHONLY, &traceFilter, &tr );
 
 	if ( tr.fraction < 0.5 )
 	{
@@ -2816,6 +3034,8 @@ bool CGrabController::UpdateObject( CBasePlayer *pPlayer, float flError )
 		}
 	}
 
+	QAngle angles = TransformAnglesFromPlayerSpace( m_attachedAnglesPlayerSpace, pPlayer );
+
 	//Show overlays of radius
 	if ( g_debug_physcannon.GetBool() )
 	{
@@ -2829,7 +3049,6 @@ bool CGrabController::UpdateObject( CBasePlayer *pPlayer, float flError )
 							0.0f );
 	}
 
-	QAngle angles = TransformAnglesFromPlayerSpace( m_attachedAnglesPlayerSpace, pPlayer );
 	
 	// If it has a preferred orientation, update to ensure we're still oriented correctly.
 	Pickup_GetPreferredCarryAngles( pEntity, pPlayer, pPlayer->EntityToWorldTransform(), angles );
@@ -2847,19 +3066,57 @@ bool CGrabController::UpdateObject( CBasePlayer *pPlayer, float flError )
 	AngleMatrix( angles, attachedToWorld );
 	VectorRotate( m_attachedPositionObjectSpace, attachedToWorld, offset );
 
-	SetTargetPosition( end - offset, angles );
+	// Translate hold position and angles across portal
+	if ( pPortalPlayer->IsHeldObjectOnOppositeSideOfPortal() )
+	{
+		CProp_Portal *pPortalLinked = pPortal->m_hLinkedPortal;
+		if ( pPortal && pPortal->m_bActivated && pPortalLinked != NULL )
+		{
+			Vector vTeleportedPosition;
+			QAngle qTeleportedAngles;
+
+			if ( !bLookingAtHeldPortal && ( start - pPortal->GetAbsOrigin() ).Length() > distance - radius )
+			{
+				// Pull the object through the portal
+				Vector vPortalLinkedForward;
+				pPortalLinked->GetVectors( &vPortalLinkedForward, NULL, NULL );
+				vTeleportedPosition = pPortalLinked->GetAbsOrigin() - vPortalLinkedForward * ( 1.0f + offset.Length() );
+				qTeleportedAngles = pPortalLinked->GetAbsAngles();
+			}
+			else
+			{
+				// Translate hold position and angles across the portal
+				VMatrix matThisToLinked = pPortal->MatrixThisToLinked();
+				UTIL_Portal_PointTransform( matThisToLinked, end - offset, vTeleportedPosition );
+				UTIL_Portal_AngleTransform( matThisToLinked, angles, qTeleportedAngles );
+			}
+
+			SetTargetPosition( vTeleportedPosition, qTeleportedAngles );
+			pPortalPlayer->SetHeldObjectPortal( pPortal );
+		}
+		else
+		{
+			pPlayer->ForceDropOfCarriedPhysObjects();
+		}
+	}
+	else
+	{
+		SetTargetPosition( end - offset, angles );
+		pPortalPlayer->SetHeldObjectPortal( NULL );
+	}
 
 	return true;
 }
 
 void CWeaponPhysCannon::UpdateObject( void )
 {
-	CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
+	CPortal_Player *pPlayer = ToPortalPlayer( GetOwner() );
 	Assert( pPlayer );
 
 	float flError = IsMegaPhysCannon() ? 18 : 12;
 	if ( !m_grabController.UpdateObject( pPlayer, flError ) )
 	{
+		pPlayer->SetHeldObjectOnOppositeSideOfPortal( false );
 		DetachObject();
 		return;
 	}
@@ -2872,17 +3129,17 @@ void CWeaponPhysCannon::DetachObject( bool playSound, bool wasLaunched )
 	if ( m_bActive == false )
 		return;
 
-	CHL2_Player *pOwner = (CHL2_Player *)ToBasePlayer( GetOwner() );
+	CPortal_Player *pOwner = (CPortal_Player *)ToBasePlayer( GetOwner() );
 	if( pOwner != NULL )
 	{
 		pOwner->EnableSprint( true );
 		pOwner->SetMaxSpeed( hl2_normspeed.GetFloat() );
-		
+		pOwner->SetHeldObjectOnOppositeSideOfPortal( false );
 		if( wasLaunched )
 		{
 			pOwner->RumbleEffect( RUMBLE_357, 0, RUMBLE_FLAG_RESTART );
 		}
-#if defined( WIN32 ) && !defined( _X360 )
+#ifdef WIN32
 		// NVNT clear constant force
 		HapticSetConstantForce(pOwner,Vector(0,0,0));
 #endif
@@ -2933,14 +3190,7 @@ void CWeaponPhysCannon::ItemPreFrame()
 	
 	if ( vm != NULL )
 	{
-		// This has to happen here because of how the SetModel interacts with the caching at startup
-		if ( m_sbStaticPoseParamsLoaded == false )
-		{
-			m_poseActive = LookupPoseParameter( "active" );
-			m_sbStaticPoseParamsLoaded = true;
-		}
-
-		vm->SetPoseParameter( m_poseActive, m_flElementPosition );
+		vm->SetPoseParameter( "active", m_flElementPosition );
 	}
 
 	// Update the object if the weapon is switched on.
@@ -3493,7 +3743,7 @@ void CWeaponPhysCannon::OpenElements( void )
 
 	if( !IsMegaPhysCannon() )
 	{
-		pOwner->RumbleEffect( RUMBLE_PHYSCANNON_OPEN, 0, RUMBLE_FLAG_RESTART );
+		pOwner->RumbleEffect(RUMBLE_PHYSCANNON_OPEN, 0, RUMBLE_FLAG_RESTART|RUMBLE_FLAG_LOOP);
 	}
 
 	if ( m_flElementPosition < 0.0f )
@@ -4528,6 +4778,13 @@ bool PlayerPickupControllerIsHoldingEntity( CBaseEntity *pPickupControllerEntity
 	return pController ? pController->IsHoldingEntity( pHeldEntity ) : false;
 }
 
+void ShutdownPickupController( CBaseEntity *pPickupControllerEntity )
+{
+	CPlayerPickupController *pController = dynamic_cast<CPlayerPickupController *>(pPickupControllerEntity);
+
+	pController->Shutdown( false );
+}
+
 
 float PhysCannonGetHeldObjectMass( CBaseCombatWeapon *pActiveWeapon, IPhysicsObject *pHeldObject )
 {
@@ -4567,6 +4824,86 @@ CBaseEntity *GetPlayerHeldEntity( CBasePlayer *pPlayer )
 	return pObject;
 }
 
+CBasePlayer *GetPlayerHoldingEntity( CBaseEntity *pEntity )
+{
+	for( int i = 1; i <= gpGlobals->maxClients; ++i )
+	{
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
+		if ( pPlayer )
+		{
+			if ( GetPlayerHeldEntity( pPlayer ) == pEntity || PhysCannonGetHeldEntity( pPlayer->GetActiveWeapon() ) == pEntity )
+				return pPlayer;
+		}
+	}
+	return NULL;
+}
+
+CGrabController *GetGrabControllerForPlayer( CBasePlayer *pPlayer )
+{
+	CPlayerPickupController *pPlayerPickupController = (CPlayerPickupController *)(pPlayer->GetUseEntity());
+	if( pPlayerPickupController )
+		return &(pPlayerPickupController->GetGrabController());
+
+	return NULL;
+}
+
+CGrabController *GetGrabControllerForPhysCannon( CBaseCombatWeapon *pActiveWeapon )
+{
+	CWeaponPhysCannon *pCannon = dynamic_cast<CWeaponPhysCannon *>(pActiveWeapon);
+	if ( pCannon )
+	{
+		return &(pCannon->GetGrabController());
+	}
+
+	return NULL;
+}
+
+void GetSavedParamsForCarriedPhysObject( CGrabController *pGrabController, IPhysicsObject *pObject, float *pSavedMassOut, float *pSavedRotationalDampingOut )
+{
+	CBaseEntity *pHeld = pGrabController->m_attachedEntity;
+	if( pHeld )
+	{
+		if( pObject->GetGameData() == (void*)pHeld )
+		{
+			IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
+			int count = pHeld->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
+			for ( int i = 0; i < count; i++ )
+			{
+				if ( pList[i] == pObject )
+				{
+					if( pSavedMassOut )
+						*pSavedMassOut = pGrabController->m_savedMass[i];
+
+					if( pSavedRotationalDampingOut )
+						*pSavedRotationalDampingOut = pGrabController->m_savedRotDamping[i];
+
+					return;
+				}
+			}
+		}
+	}
+
+	if( pSavedMassOut )
+		*pSavedMassOut = 0.0f;
+
+	if( pSavedRotationalDampingOut )
+		*pSavedRotationalDampingOut = 0.0f;
+
+	return;
+}
+
+void UpdateGrabControllerTargetPosition( CBasePlayer *pPlayer, Vector *vPosition, QAngle *qAngles )
+{
+	CGrabController *pGrabController = GetGrabControllerForPlayer( pPlayer );
+
+	if ( !pGrabController )
+		return;
+
+	pGrabController->UpdateObject( pPlayer, 12 );
+	pGrabController->GetTargetPosition( vPosition, qAngles );
+}
+
+
 bool PhysCannonAccountableForObject( CBaseCombatWeapon *pPhysCannon, CBaseEntity *pObject )
 {
 	CWeaponPhysCannon *pCannon = dynamic_cast<CWeaponPhysCannon *>(pPhysCannon);
@@ -4590,4 +4927,8 @@ float PlayerPickupGetHeldObjectMass( CBaseEntity *pPickupControllerEntity, IPhys
 	return mass;
 }
 
-#endif //PORTAL
+
+void GrabController_SetPortalPenetratingEntity( CGrabController *pController, CBaseEntity *pPenetrated )
+{
+	pController->SetPortalPenetratingEntity( pPenetrated );
+}

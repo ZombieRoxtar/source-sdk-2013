@@ -14,7 +14,7 @@
 #include "in_buttons.h"
 #include "portal_gamerules.h"
 #include "weapon_portalgun.h"
-#include "portal\weapon_physcannon.h"
+#include "weapon_physcannon.h"
 #include "KeyValues.h"
 #include "team.h"
 #include "eventqueue.h"
@@ -384,7 +384,6 @@ void CPortal_Player::GiveDefaultItems(void)
 {
 	castable_string_t st("suit_no_sprint");
 	GlobalEntity_SetState(st, GLOBAL_OFF);
-	InputDisableFlashlight(inputdata_t());
 }
 
 
@@ -621,6 +620,7 @@ void CPortal_Player::PostThink(void)
 	angles[PITCH] = 0;
 	SetLocalAngles(angles);
 
+#ifdef REGENERATION
 	// Regenerate heath after 3 seconds
 	if (IsAlive() && GetHealth() < GetMaxHealth())
 	{
@@ -643,6 +643,7 @@ void CPortal_Player::PostThink(void)
 			UTIL_ScreenFade(this, hurtScreenOverlay, 1.0f, 0.1f, FFADE_IN | FFADE_PURGE);
 		}
 	}
+#endif
 
 	UpdatePortalPlaneSounds();
 	UpdateWooshSounds();

@@ -29,6 +29,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+#ifndef HL2_DLL
 void Host_Say( edict_t *pEdict, bool teamonly );
 
 extern CBaseEntity*	FindPickerEntityClass( CBasePlayer *pPlayer, char *classname );
@@ -174,3 +175,5 @@ void InstallGameRules()
 	}
 }
 
+
+#endif

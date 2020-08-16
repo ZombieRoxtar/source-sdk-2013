@@ -1213,15 +1213,15 @@ bool C_Portal_Player::CanSprint( void )
 //-----------------------------------------------------------------------------
 void C_Portal_Player::StartSprinting( void )
 {
-	//if( m_HL2Local.m_flSuitPower < 10 )
-	//{
-	//	// Don't sprint unless there's a reasonable
-	//	// amount of suit power.
-	//	CPASAttenuationFilter filter( this );
-	//	filter.UsePredictionRules();
-	//	EmitSound( filter, entindex(), "Player.SprintNoPower" );
-	//	return;
-	//}
+	if( m_HL2Local.m_flSuitPower < 10 )
+	{
+		// Don't sprint unless there's a reasonable
+		// amount of suit power.
+		CPASAttenuationFilter filter( this );
+		filter.UsePredictionRules();
+		EmitSound( filter, entindex(), "Player.SprintNoPower" );
+		return;
+	}
 
 	CPASAttenuationFilter filter( this );
 	filter.UsePredictionRules();

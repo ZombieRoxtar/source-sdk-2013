@@ -47,6 +47,7 @@ void RegisterUserMessages()
 	usermessages->Register( "LogoTimeMsg", 4 );
 	usermessages->Register( "AchievementEvent", -1 );
 
+	usermessages->Register("UpdateJalopyRadar", -1);
 
 	//new stuff for portal
 	usermessages->Register( "EntityPortalled", sizeof( long ) + sizeof( long ) + sizeof( Vector ) + sizeof( QAngle ) ); //something got teleported through a portal

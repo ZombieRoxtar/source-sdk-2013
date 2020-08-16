@@ -8,7 +8,7 @@
 #include "cbase.h"
 #include "prop_portal.h"
 #include "portal_player.h"
-#include "portal/weapon_physcannon.h"
+#include "weapon_physcannon.h"
 #include "physics_npc_solver.h"
 #include "envmicrophone.h"
 #include "env_speaker.h"

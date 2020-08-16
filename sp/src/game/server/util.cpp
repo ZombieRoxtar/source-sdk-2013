@@ -148,7 +148,6 @@ IEntityFactory *CEntityFactoryDictionary::FindFactory( const char *pClassName )
 //-----------------------------------------------------------------------------
 void CEntityFactoryDictionary::InstallFactory( IEntityFactory *pFactory, const char *pClassName )
 {
-	Assert( FindFactory( pClassName ) == NULL );
 	m_Factories.Insert( pClassName, pFactory );
 }
 

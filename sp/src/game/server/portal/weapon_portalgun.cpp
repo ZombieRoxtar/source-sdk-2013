@@ -688,6 +688,21 @@ void CWeaponPortalgun::DoEffectNone( void )
 	}
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Shutdown your portals
+// BUGBUG: Using the link id will also close preplaced portals in the early game
+//-----------------------------------------------------------------------------
+bool CWeaponPortalgun::Reload( void )
+{
+	CProp_Portal* pPortal = CProp_Portal::FindPortal(m_iPortalLinkageGroupID, false, true);
+	pPortal->Fizzle();
+	pPortal = CProp_Portal::FindPortal(m_iPortalLinkageGroupID, true, true);
+	pPortal->Fizzle();
+	SendWeaponAnim(ACT_VM_FIZZLE);
+	SetLastFiredPortal(0);
+	return true;
+}
+
 void CC_UpgradePortalGun( void )
 {
 	CPortal_Player *pPlayer = ToPortalPlayer( UTIL_GetCommandClient() );

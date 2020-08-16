@@ -15,6 +15,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+#ifndef PORTAL
 void RegisterUserMessages( void )
 {
 	usermessages->Register( "Geiger", 1 );
@@ -51,3 +52,4 @@ void RegisterUserMessages( void )
 	RegisterHapticMessages();
 #endif
 }
+#endif //PORTAL
