@@ -216,6 +216,12 @@ void C_WeaponPortalgun::StartEffects( void )
 		pModelView = pModelWorld;
 	}
 
+	/*
+		BUGBUG: If the portalgun's viewmodel is not visible when these effects are instantiated,
+			then the sprite on the top of the body is scaled much larger than intended.
+			This can be mitigated by giving the weapon txt a high "weight".
+	//*/
+
 	// ------------------------------------------
 	// Lights
 	// ------------------------------------------
