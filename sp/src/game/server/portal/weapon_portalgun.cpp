@@ -713,6 +713,10 @@ void CC_UpgradePortalGun( void )
 		pPortalGun->SetCanFirePortal1();
 		pPortalGun->SetCanFirePortal2();
 	}
+	else
+	{
+		pPlayer->GiveNamedItem( "weapon_portalgun" );
+	}
 }
 
 static ConCommand upgrade_portal("upgrade_portalgun", CC_UpgradePortalGun, "Equips the player with a single portal portalgun. Use twice for a dual portal portalgun.\n\tArguments:   	none ", FCVAR_CHEAT);
