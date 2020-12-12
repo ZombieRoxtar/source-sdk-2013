@@ -42,6 +42,11 @@ STUB_WEAPON_CLASS( weapon_hopwire, WeaponHopwire, C_BaseHLCombatWeapon );
 #ifdef HL2_LOSTCOAST
 STUB_WEAPON_CLASS( weapon_oldmanharpoon, WeaponOldManHarpoon, C_WeaponCitizenPackage );
 #endif
+
+#ifdef PORTAL
+STUB_WEAPON_CLASS(weapon_lemon, WeaponLemon, C_BaseHLCombatWeapon);
+#endif
+
 #endif
 
 
