@@ -63,29 +63,31 @@ void CStaticCollisionPolyhedronCache::LevelInitPreEntity( void )
 
 	// FIXME: Fast updates would be nice but this method doesn't work with the recent changes to standard containers.
 	// For now we're going with the quick fix of always doing a full update. -Jeep
+	// Undone to prevent HL2 crashes.
 
-//	if( Q_stricmp( m_CachedMap, MapName() ) != 0 )
-//	{
-//		// New map or the last load was a transition, fully update the cache
-//		m_CachedMap.Set( MapName() );
+	if (false) // FIXME!
+	//if( Q_stricmp( m_CachedMap, MapName() ) != 0 )
+	{
+		// New map or the last load was a transition, fully update the cache
+		m_CachedMap.Set( MapName() );
 
 		Update();
-//	}
-//	else
-//	{
-//		// No need for a full update, but we need to remap static prop ICollideable's in the old system to the new system
-//		for( int i = m_CollideableIndicesMap.Count(); --i >= 0; )
-//		{
-//#ifdef _DEBUG
-//			StaticPropPolyhedronCacheInfo_t cacheInfo = m_CollideableIndicesMap.Element(i);
-//#endif
-//			m_CollideableIndicesMap.Reinsert( staticpropmgr->GetStaticPropByIndex( m_CollideableIndicesMap.Element(i).iStaticPropIndex ), i );
-//
-//			Assert( (m_CollideableIndicesMap.Element(i).iStartIndex == cacheInfo.iStartIndex) &&
-//					(m_CollideableIndicesMap.Element(i).iNumPolyhedrons == cacheInfo.iNumPolyhedrons) &&
-//					(m_CollideableIndicesMap.Element(i).iStaticPropIndex == cacheInfo.iStaticPropIndex) ); //I'm assuming this doesn't cause a reindex of the unordered list, if it does then this needs to be rewritten
-//		}
-//	}
+	}
+	else
+	{
+		// No need for a full update, but we need to remap static prop ICollideable's in the old system to the new system
+		for( int i = m_CollideableIndicesMap.Count(); --i >= 0; )
+		{
+#ifdef _DEBUG
+			StaticPropPolyhedronCacheInfo_t cacheInfo = m_CollideableIndicesMap.Element(i);
+#endif
+			m_CollideableIndicesMap.Reinsert( staticpropmgr->GetStaticPropByIndex( m_CollideableIndicesMap.Element(i).iStaticPropIndex ), i );
+
+			Assert( (m_CollideableIndicesMap.Element(i).iStartIndex == cacheInfo.iStartIndex) &&
+					(m_CollideableIndicesMap.Element(i).iNumPolyhedrons == cacheInfo.iNumPolyhedrons) &&
+					(m_CollideableIndicesMap.Element(i).iStaticPropIndex == cacheInfo.iStaticPropIndex) ); //I'm assuming this doesn't cause a reindex of the unordered list, if it does then this needs to be rewritten
+		}
+	}
 }
 
 void CStaticCollisionPolyhedronCache::Shutdown( void )
