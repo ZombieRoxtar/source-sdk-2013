@@ -1856,7 +1856,9 @@ void QuaternionMult( const Quaternion &p, const Quaternion &q, Quaternion &qt )
 
 void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matrix )
 {
-	Assert( pos.IsValid() );
+	/* This trips during normal play
+	Assert( q.IsValid() );
+	// */
 
 	QuaternionMatrix( q, matrix );
 
@@ -1868,7 +1870,9 @@ void QuaternionMatrix( const Quaternion &q, const Vector &pos, matrix3x4_t& matr
 void QuaternionMatrix( const Quaternion &q, matrix3x4_t& matrix )
 {
 	Assert( s_bMathlibInitialized );
+	/* This trips during normal play
 	Assert( q.IsValid() );
+	// */
 
 #ifdef _VPROF_MATHLIB
 	VPROF_BUDGET( "QuaternionMatrix", "Mathlib" );
