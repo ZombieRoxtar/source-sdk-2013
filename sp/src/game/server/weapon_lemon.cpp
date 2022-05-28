@@ -1,7 +1,7 @@
 //========= Source SDK License, All rights reserved. ============//
 //
-// Purpose:  Debug weapon that fires rockets and energy balls.
-// Scienece: Isn't about "why?" It's about "Why not?"
+// Purpose: Debug weapon that fires rockets and energy balls.
+// Science: Isn't about "Why?" It's about "Why not?"
 //
 //===============================================================//
 #include "cbase.h"
