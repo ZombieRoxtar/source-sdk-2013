@@ -69,7 +69,7 @@ void CStaticCollisionPolyhedronCache::LevelInitPreEntity( void )
 	//if( Q_stricmp( m_CachedMap, MapName() ) != 0 )
 	{
 		// New map or the last load was a transition, fully update the cache
-		m_CachedMap.Set( MapName() );
+		//m_CachedMap.Set( MapName() );
 
 		Update();
 	}
