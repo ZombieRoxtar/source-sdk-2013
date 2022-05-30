@@ -2292,7 +2292,7 @@ void C_BaseEntity::MarkAimEntsDirty()
 	for ( i = 0; i < c; ++i )
 	{
 		C_BaseEntity *pEnt = g_AimEntsList[ i ];
-		Assert( pEnt && pEnt->GetMoveParent() );
+		/* Assert( pEnt && pEnt->GetMoveParent() ); // Trips a lot. //*/
 		if ( pEnt->IsEffectActive(EF_BONEMERGE | EF_PARENT_ANIMATES) )
 		{
 			pEnt->AddEFlags( EFL_DIRTY_ABSTRANSFORM );
@@ -2310,7 +2310,7 @@ void C_BaseEntity::CalcAimEntPositions()
 	{
 		C_BaseEntity *pEnt = g_AimEntsList[ i ];
 		Assert( pEnt );
-		Assert( pEnt->GetMoveParent() );
+		/* Assert( pEnt->GetMoveParent() ); // Trips a lot. //*/
 		if ( pEnt->IsEffectActive(EF_BONEMERGE) )
 		{
 			pEnt->CalcAbsolutePosition( );

@@ -63,15 +63,15 @@ void CStaticCollisionPolyhedronCache::LevelInitPreEntity( void )
 
 	// FIXME: Fast updates would be nice but this method doesn't work with the recent changes to standard containers.
 	// For now we're going with the quick fix of always doing a full update. -Jeep
-	// Undone to prevent HL2 crashes.
-
+	/*
 	if (false) // FIXME!
 	//if( Q_stricmp( m_CachedMap, MapName() ) != 0 )
 	{
 		// New map or the last load was a transition, fully update the cache
 		//m_CachedMap.Set( MapName() );
-
+		//*/
 		Update();
+		/*
 	}
 	else
 	{
@@ -88,6 +88,7 @@ void CStaticCollisionPolyhedronCache::LevelInitPreEntity( void )
 					(m_CollideableIndicesMap.Element(i).iStaticPropIndex == cacheInfo.iStaticPropIndex) ); //I'm assuming this doesn't cause a reindex of the unordered list, if it does then this needs to be rewritten
 		}
 	}
+	//*/
 }
 
 void CStaticCollisionPolyhedronCache::Shutdown( void )

@@ -694,10 +694,13 @@ void CWeaponPortalgun::DoEffectNone( void )
 //-----------------------------------------------------------------------------
 bool CWeaponPortalgun::Reload( void )
 {
-	CProp_Portal* pPortal = CProp_Portal::FindPortal(m_iPortalLinkageGroupID, false, true);
-	pPortal->Fizzle();
-	pPortal = CProp_Portal::FindPortal(m_iPortalLinkageGroupID, true, true);
-	pPortal->Fizzle();
+	CProp_Portal* pPortal = CProp_Portal::FindPortal(m_iPortalLinkageGroupID, false, false);
+	if (pPortal)
+		pPortal->Fizzle();
+	pPortal = CProp_Portal::FindPortal(m_iPortalLinkageGroupID, true, false);
+	if (pPortal)
+		pPortal->Fizzle();
+
 	SendWeaponAnim(ACT_VM_FIZZLE);
 	SetLastFiredPortal(0);
 	return true;
