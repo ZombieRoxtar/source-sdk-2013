@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:	Player for Portal.
 //
@@ -608,6 +608,7 @@ void CPortal_Player::PreThink(void)
 
 	SetLocalAngles(vOldAngles);
 }
+ConVar portal_regen("portal_regen", "0", FCVAR_CHEAT | FCVAR_REPLICATED, "Regenerate health for Portal gameplay");
 
 void CPortal_Player::PostThink(void)
 {
@@ -620,30 +621,31 @@ void CPortal_Player::PostThink(void)
 	angles[PITCH] = 0;
 	SetLocalAngles(angles);
 
-#ifdef REGENERATION
-	// Regenerate heath after 3 seconds
-	if (IsAlive() && GetHealth() < GetMaxHealth())
+	if (portal_regen.GetBool())
 	{
-		// Color to overlay on the screen while the player is taking damage
-		color32 hurtScreenOverlay = { 64,0,0,64 };
-
-		if (gpGlobals->curtime > m_fTimeLastHurt + sv_regeneration_wait_time.GetFloat())
+		// Regenerate heath after 3 seconds
+		if (IsAlive() && GetHealth() < GetMaxHealth())
 		{
-			TakeHealth(1, DMG_GENERIC);
-			m_bIsRegenerating = true;
+			// Color to overlay on the screen while the player is taking damage
+			color32 hurtScreenOverlay = { 64,0,0,64 };
 
-			if (GetHealth() >= GetMaxHealth())
+			if (gpGlobals->curtime > m_fTimeLastHurt + sv_regeneration_wait_time.GetFloat())
+			{
+				TakeHealth(1, DMG_GENERIC);
+				m_bIsRegenerating = true;
+
+				if (GetHealth() >= GetMaxHealth())
+				{
+					m_bIsRegenerating = false;
+				}
+			}
+			else
 			{
 				m_bIsRegenerating = false;
+				UTIL_ScreenFade(this, hurtScreenOverlay, 1.0f, 0.1f, FFADE_IN | FFADE_PURGE);
 			}
 		}
-		else
-		{
-			m_bIsRegenerating = false;
-			UTIL_ScreenFade(this, hurtScreenOverlay, 1.0f, 0.1f, FFADE_IN | FFADE_PURGE);
-		}
 	}
-#endif
 
 	UpdatePortalPlaneSounds();
 	UpdateWooshSounds();

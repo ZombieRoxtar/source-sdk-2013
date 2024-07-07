@@ -36,6 +36,9 @@
 class CPortalGameRulesProxy : public CGameRulesProxy
 {
 public:
+#if !defined ( CLIENT_DLL )
+	CPortalGameRulesProxy();
+#endif
 	DECLARE_CLASS( CPortalGameRulesProxy, CGameRulesProxy );
 	DECLARE_NETWORKCLASS();
 };
@@ -44,6 +47,7 @@ public:
 class CPortalGameRules : public CHalfLife2
 {
 public:
+	CPortalGameRules();
 	DECLARE_CLASS( CPortalGameRules, CSingleplayRules );
 
 	virtual bool	Init();
@@ -71,7 +75,6 @@ private:
 
 	DECLARE_SERVERCLASS_NOBASE(); // This makes datatables able to access our private vars.
 
-	CPortalGameRules();
 	virtual ~CPortalGameRules() {}
 
 	virtual void			Think( void );

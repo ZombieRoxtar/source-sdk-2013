@@ -35,7 +35,6 @@
 
 
 
-#ifndef PORTAL
 REGISTER_GAMERULES_CLASS( CPortalGameRules );
 
 BEGIN_NETWORK_TABLE_NOBASE( CPortalGameRules, DT_PortalGameRules )
@@ -84,6 +83,15 @@ extern ConVar	sk_autoaim_scale2;
 
 #if !defined ( CLIENT_DLL )
 extern ConVar	sv_alternateticks;
+
+extern ConVar	portal_nofalldmg;
+extern ConVar	portal_regen;
+CPortalGameRulesProxy::CPortalGameRulesProxy()
+{
+	/* The mere existance of this entity enforces Portal rules. */
+	portal_nofalldmg.SetValue(1);
+	portal_regen.SetValue(1);
+}
 #endif // !CLIENT_DLL
 
 #define PORTAL_WEIGHT_BOX_MODEL_NAME "models/props/metal_box.mdl"
@@ -175,12 +183,9 @@ static ConCommand ent_create_portal_metal_sphere("ent_create_portal_metal_sphere
 
 
 
-#ifdef CLIENT_DLL //{
 
 
-#else //}{
 
-	extern bool		g_fGameOver;
 	
 	//-----------------------------------------------------------------------------
 	// Purpose:
@@ -193,6 +198,9 @@ static ConCommand ent_create_portal_metal_sphere("ent_create_portal_metal_sphere
 		g_pCVar->FindVar( "sv_maxreplay" )->SetValue( "1.5" );
 	}
 
+#ifdef CLIENT_DLL //{
+#else //}{
+	extern bool		g_fGameOver;
 
 	//-----------------------------------------------------------------------------
 	// Purpose: called each time a player uses a "cmd" command
@@ -1226,7 +1234,7 @@ bool CPortalGameRules::IsBonusChallengeTimeBased( void )
 }
 
 #endif
-
+#ifndef PORTAL
 // ------------------------------------------------------------------------------------ //
 // Global functions.
 // ------------------------------------------------------------------------------------ //

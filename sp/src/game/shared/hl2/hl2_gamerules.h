@@ -35,6 +35,7 @@ public:
 
 	// Damage Query Overrides.
 	virtual bool			Damage_IsTimeBased( int iDmgType );
+	float			FlPlayerFallDamage(CBasePlayer* pPlayer);
 	// TEMP:
 	virtual int				Damage_GetTimeBased( void );
 	

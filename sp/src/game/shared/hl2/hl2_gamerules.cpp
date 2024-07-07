@@ -218,6 +218,18 @@ bool CHalfLife2::Damage_IsTimeBased( int iDmgType )
 #ifdef HL2_EPISODIC
 ConVar  alyx_darkness_force( "alyx_darkness_force", "0", FCVAR_CHEAT | FCVAR_REPLICATED );
 #endif // HL2_EPISODIC
+#ifdef PORTAL
+ConVar portal_nofalldmg("portal_nofalldmg", "0", FCVAR_CHEAT | FCVAR_REPLICATED, "Remove fall damage for Portal gameplay");
+float CHalfLife2::FlPlayerFallDamage(CBasePlayer* pPlayer)
+{
+	if (portal_nofalldmg.GetBool())
+	{
+		// No fall damage in Portal!
+		return 0.0f;
+	}
+	return BaseClass::FlPlayerFallDamage(pPlayer);
+}
+#endif // PORTAL
 
 #endif // CLIENT_DLL
 
