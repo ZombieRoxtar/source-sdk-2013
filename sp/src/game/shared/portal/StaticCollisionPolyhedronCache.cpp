@@ -147,8 +147,6 @@ void CStaticCollisionPolyhedronCache::Update( void )
 
 		float fStackPlanes[4 * 400]; //400 is a crapload of planes in my opinion
 
-		const float fPrecision = 0.012f; // We want low values, but they can cause crashes.
-
 		while( enginetrace->GetBrushInfo( iBrush, &Planes, NULL ) )
 		{
 			int iPlaneCount = Planes.Count();
@@ -171,7 +169,7 @@ void CStaticCollisionPolyhedronCache::Update( void )
 					pNonstackPlanes[(i * 4) + 3] = pReturnedPlanes[i].w;
 				}
 
-				pTempPolyhedron = GeneratePolyhedronFromPlanes( pNonstackPlanes, iPlaneCount, fPrecision, true );
+				pTempPolyhedron = GeneratePolyhedronFromPlanes( pNonstackPlanes, iPlaneCount, 0.01f, true );
 
 				delete []pNonstackPlanes;
 			}
@@ -184,7 +182,7 @@ void CStaticCollisionPolyhedronCache::Update( void )
 					fStackPlanes[(i * 4) + 2] = pReturnedPlanes[i].z;
 					fStackPlanes[(i * 4) + 3] = pReturnedPlanes[i].w;
 				}
-				pTempPolyhedron = GeneratePolyhedronFromPlanes(fStackPlanes, iPlaneCount, fPrecision, true);
+				pTempPolyhedron = GeneratePolyhedronFromPlanes(fStackPlanes, iPlaneCount, 0.01f, true);
 			}
 
 			if( pTempPolyhedron )
