@@ -58,20 +58,20 @@ CStaticCollisionPolyhedronCache::~CStaticCollisionPolyhedronCache( void )
 	Clear();
 }
 
+ConVar game_forceupdates("game_forceupdates", "1", FCVAR_NONE, "Always force full updates of the game's polyhedron cache.\nNeeded for portals, but crashes some HL2 maps.");
+
 void CStaticCollisionPolyhedronCache::LevelInitPreEntity( void )
 {
-
+	
 	// FIXME: Fast updates would be nice but this method doesn't work with the recent changes to standard containers.
 	// For now we're going with the quick fix of always doing a full update. -Jeep
-	/*
-	if (false) // FIXME!
+
+	if (game_forceupdates.GetBool() && !DisableNewUpdates())
 	//if( Q_stricmp( m_CachedMap, MapName() ) != 0 )
 	{
 		// New map or the last load was a transition, fully update the cache
 		//m_CachedMap.Set( MapName() );
-		//*/
 		Update();
-		/*
 	}
 	else
 	{
@@ -88,7 +88,6 @@ void CStaticCollisionPolyhedronCache::LevelInitPreEntity( void )
 					(m_CollideableIndicesMap.Element(i).iStaticPropIndex == cacheInfo.iStaticPropIndex) ); //I'm assuming this doesn't cause a reindex of the unordered list, if it does then this needs to be rewritten
 		}
 	}
-	//*/
 }
 
 void CStaticCollisionPolyhedronCache::Shutdown( void )
@@ -481,8 +480,21 @@ int CStaticCollisionPolyhedronCache::GetStaticPropPolyhedrons( ICollideable *pSt
 	return iOutputArraySize;
 }
 
-
-
-
-
-
+bool CStaticCollisionPolyhedronCache::DisableNewUpdates(void)
+{
+	/* HACKHACK: In known HL2 maps, force off the convar that forces on Polyhedron Cache updates. */
+	if (!(Q_strnicmp(MapName(),"maps/d1_",8) &&
+		Q_strnicmp(MapName(),"maps/d2_",8) &&
+		Q_strnicmp(MapName(),"maps/d3_",8) &&
+		Q_strnicmp(MapName(),"maps/episodic_",14) &&
+		Q_strnicmp(MapName(),"maps/ep2_",9) &&
+		Q_strnicmp(MapName(),"d1_",3) &&
+		Q_strnicmp(MapName(),"d2_",3) &&
+		Q_strnicmp(MapName(),"d3_",3) &&
+		Q_strnicmp(MapName(),"episodic_",9) &&
+		Q_strnicmp(MapName(),"ep2_",4)))
+	{
+		return true;
+	}
+	return false;
+}

@@ -44,7 +44,8 @@ private:
 	CUtlVector<CPolyhedron *> m_StaticPropPolyhedrons;
 	CUtlMap<ICollideable *, StaticPropPolyhedronCacheInfo_t> m_CollideableIndicesMap;
 
-
+	/* Disable PolyhedronCache Updates by default in known HL2 maps. */
+	bool DisableNewUpdates( void );
 	void Clear( void );
 	void Update( void );
 };
